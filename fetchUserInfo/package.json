@@ -1,5 +1,10 @@
 {
+  "name": "user-search-function",
+  "version": "1.0.0",
+  "description": "Fetch and filter user data", 
+  "main": "src/main.js",
+  "type": "module",
   "dependencies": {
-    "node-appwrite": "^10.0.0"
+    "node-appwrite": "^13.0.0"
   }
 }
