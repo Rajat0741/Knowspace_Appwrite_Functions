@@ -63,15 +63,11 @@ export default async ({ req, res, log, error }) => {
     const sanitizedUsers = response.users.map(user => ({
       $id: user.$id || '',
       name: user.name || '',
-      labels: Array.isArray(user.labels) ? user.labels : [],
-      status: user.status || false,
+      bio: user.prefs?.bio || '',
       registration: user.registration || '',
-      emailVerification: user.emailVerification || false,
-      phoneVerification: user.phoneVerification || false,
       // Add avatar if available (common use case)
-      ...(user.prefs?.avatar && { avatar: user.prefs.avatar }),
+      profilePictureId: user.prefs.profilePictureId || '',
       // Explicitly exclude sensitive fields for clarity
-      // email, phone, password, hash, hashOptions, etc. are intentionally omitted
     }));
 
     const totalUsers = response.total || 0;
