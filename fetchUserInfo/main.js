@@ -7,7 +7,7 @@ export default async ({ req, res, log, error }) => {
     .setKey(process.env.APPWRITE_FUNCTION_API_KEY);
   
   const users = new Users(client);
-
+  
   try {
     // Validate request method
     if (req.method !== 'POST') {
@@ -26,7 +26,7 @@ export default async ({ req, res, log, error }) => {
       }, 400);
     }
 
-    const { name, limit = 25, offset = 0 } = requestBody;
+    const { name, limit = 25, offset = 0, searchType = 'contains' } = requestBody;
     
     // Enhanced validation
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -36,11 +36,11 @@ export default async ({ req, res, log, error }) => {
     }
 
     // Sanitize and validate pagination parameters
-    const sanitizedLimit = Math.min(Math.max(parseInt(limit) || 25, 1), 100); // Cap at 100
+    const sanitizedLimit = Math.min(Math.max(parseInt(limit) || 25, 1), 100);
     const sanitizedOffset = Math.max(parseInt(offset) || 0, 0);
     const sanitizedName = name.trim();
-
-    // Validate name length (prevent overly broad searches)
+    
+    // Validate name length
     if (sanitizedName.length < 2) {
       return res.json({ 
         error: 'Name must be at least 2 characters long' 
@@ -48,13 +48,32 @@ export default async ({ req, res, log, error }) => {
     }
 
     log(`Searching for users with name: "${sanitizedName}", limit: ${sanitizedLimit}, offset: ${sanitizedOffset}`);
-
-    // Build queries for searching by name
-    const queries = [
-      Query.search('name', sanitizedName),
-      Query.limit(sanitizedLimit),
-      Query.offset(sanitizedOffset)
-    ];
+    
+    // Build queries WITHOUT using Query.search() to avoid fulltext index requirement
+    let queries = [];
+    
+    // Choose search strategy based on searchType parameter
+    switch (searchType) {
+      case 'exact':
+        queries.push(Query.equal('name', [sanitizedName]));
+        break;
+      case 'startsWith':
+        queries.push(Query.startsWith('name', sanitizedName));
+        break;
+      case 'contains':
+      default:
+        // Use contains for partial matching (works without fulltext index)
+        queries.push(Query.contains('name', sanitizedName));
+        break;
+    }
+    
+    // Add pagination
+    queries.push(Query.limit(sanitizedLimit));
+    queries.push(Query.offset(sanitizedOffset));
+    
+    // Optional: Add ordering if you want consistent results
+    // Note: This requires an index on 'name' attribute for sorting
+    // queries.push(Query.orderAsc('name'));
 
     // Fetch users from Appwrite
     const response = await users.list(queries);
@@ -65,9 +84,7 @@ export default async ({ req, res, log, error }) => {
       name: user.name || '',
       bio: user.prefs?.bio || '',
       registration: user.registration || '',
-      // Add avatar if available (common use case)
-      profilePictureId: user.prefs.profilePictureId || '',
-      // Explicitly exclude sensitive fields for clarity
+      profilePictureId: user.prefs?.profilePictureId || '',
     }));
 
     const totalUsers = response.total || 0;
@@ -98,7 +115,7 @@ export default async ({ req, res, log, error }) => {
       type: err.type
     });
 
-    // Different error responses based on error type
+    // Handle specific error types
     if (err.code === 401) {
       return res.json({ 
         error: 'Unauthorized access',
@@ -113,7 +130,15 @@ export default async ({ req, res, log, error }) => {
       }, 429);
     }
 
-    // Generic error response (don't expose internal details)
+    if (err.message && err.message.includes('fulltext index')) {
+      return res.json({ 
+        error: 'Search index not configured',
+        message: 'Fulltext index required for search operations. Using alternative query methods.',
+        suggestion: 'Create a fulltext index on the name attribute or use searchType: "contains", "startsWith", or "exact"'
+      }, 400);
+    }
+
+    // Generic error response
     return res.json({ 
       error: 'Failed to fetch users',
       message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
