@@ -1,4 +1,4 @@
-import { Client, Users } from 'node-appwrite';
+import { Client, Users, Query } from 'node-appwrite';
 
 export default async ({ req, res, log, error }) => {
   const client = new Client()
@@ -37,17 +37,35 @@ export default async ({ req, res, log, error }) => {
 
     const sanitizedUserId = userId.trim();
 
-    // Validate user ID format (basic check for Appwrite ID format)
-    if (sanitizedUserId.length < 19 || !/^[a-zA-Z0-9]+$/.test(sanitizedUserId)) {
+    log(`Searching for user with ID containing: ${sanitizedUserId}`);
+
+    // Build query to search for user ID using contains
+    let queries = [];
+    
+    try {
+      queries.push(Query.contains('$id', sanitizedUserId));
+      queries.push(Query.limit(1)); // Only return first match
+    } catch (queryError) {
       return res.json({ 
-        error: 'Invalid user ID format' 
+        error: 'Failed to build query',
+        message: queryError.message
       }, 400);
     }
 
-    log(`Fetching user data for ID: ${sanitizedUserId}`);
+    // Search users from Appwrite
+    const userList = await users.list({
+      queries: queries
+    });
 
-    // Fetch user from Appwrite
-    const user = await users.get(sanitizedUserId);
+    // Check if user found
+    if (!userList.users || userList.users.length === 0) {
+      return res.json({ 
+        error: 'User not found',
+        message: 'No user exists with the provided ID'
+      }, 404);
+    }
+
+    const user = userList.users[0]; // Get first match
 
     // Enhanced data sanitization with null safety
     const sanitizedUser = {
@@ -107,11 +125,11 @@ export default async ({ req, res, log, error }) => {
       }, 401);
     }
 
-    if (err.code === 404) {
+    if (err.code === 400) {
       return res.json({ 
-        error: 'User not found',
-        message: 'No user exists with the provided ID'
-      }, 404);
+        error: 'Bad request',
+        message: 'Invalid query parameters or search criteria'
+      }, 400);
     }
 
     if (err.code === 429) {
@@ -121,16 +139,17 @@ export default async ({ req, res, log, error }) => {
       }, 429);
     }
 
-    if (err.code === 400) {
+    // Handle query-specific errors
+    if (err.message && err.message.includes('Invalid query')) {
       return res.json({ 
-        error: 'Bad request',
-        message: 'Invalid user ID format or parameter'
+        error: 'Invalid search query',
+        message: 'The search parameters provided are not valid for the specified field'
       }, 400);
     }
 
     // Generic error response
     return res.json({ 
-      error: 'Failed to fetch user',
+      error: 'Failed to search users',
       message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     }, 500);
   }
