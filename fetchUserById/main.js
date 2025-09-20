@@ -1,86 +1,171 @@
-import { Client, Users, Query } from 'node-appwrite';
+import { Client, Users } from 'node-appwrite';
 
 export default async ({ req, res, log, error }) => {
-  // Validate environment variables
-  if (!process.env.APPWRITE_FUNCTION_ENDPOINT) {
+  // Start with immediate logging to confirm function is running
+  try {
+    log('Function started');
+    log(`Request method: ${req.method}`);
+    log(`Request body type: ${typeof req.body}`);
+    log(`Request body: ${JSON.stringify(req.body)}`);
+  } catch (e) {
+    return res.json({ 
+      error: 'Logging failed',
+      message: e.message
+    }, 500);
+  }
+
+  // Check environment variables with detailed logging
+  const endpoint = process.env.APPWRITE_FUNCTION_ENDPOINT;
+  const projectId = process.env.APPWRITE_FUNCTION_PROJECT_ID;
+  const apiKey = process.env.APPWRITE_FUNCTION_API_KEY;
+
+  log(`Endpoint exists: ${!!endpoint}`);
+  log(`Project ID exists: ${!!projectId}`);
+  log(`API Key exists: ${!!apiKey}`);
+
+  if (!endpoint) {
+    error('Missing APPWRITE_FUNCTION_ENDPOINT');
     return res.json({ 
       error: 'Missing configuration',
       message: 'APPWRITE_FUNCTION_ENDPOINT is not set'
     }, 500);
   }
 
-  if (!process.env.APPWRITE_FUNCTION_PROJECT_ID) {
+  if (!projectId) {
+    error('Missing APPWRITE_FUNCTION_PROJECT_ID');
     return res.json({ 
       error: 'Missing configuration', 
       message: 'APPWRITE_FUNCTION_PROJECT_ID is not set'
     }, 500);
   }
 
-  if (!process.env.APPWRITE_FUNCTION_API_KEY) {
+  if (!apiKey) {
+    error('Missing APPWRITE_FUNCTION_API_KEY');
     return res.json({ 
       error: 'Missing configuration',
       message: 'APPWRITE_FUNCTION_API_KEY is not set'
     }, 500);
   }
 
-  const client = new Client()
-    .setEndpoint(process.env.APPWRITE_FUNCTION_ENDPOINT)
-    .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
-    .setKey(process.env.APPWRITE_FUNCTION_API_KEY);
+  log('Environment variables validated');
 
-  const users = new Users(client);
+  // Initialize client with error handling
+  let client;
+  let users;
+  
+  try {
+    log('Initializing Appwrite client');
+    client = new Client()
+      .setEndpoint(endpoint)
+      .setProject(projectId)
+      .setKey(apiKey);
+    
+    users = new Users(client);
+    log('Appwrite client initialized successfully');
+  } catch (e) {
+    error(`Failed to initialize client: ${e.message}`);
+    return res.json({ 
+      error: 'Client initialization failed',
+      message: e.message
+    }, 500);
+  }
 
   try {
     // Validate request method
     if (req.method !== 'POST') {
+      log(`Invalid method: ${req.method}`);
       return res.json({ 
-        error: 'Method not allowed. Use POST.' 
+        error: 'Method not allowed',
+        message: `Use POST method. Received: ${req.method}`
       }, 405);
     }
 
-    // Validate and parse request body
+    // Parse request body with detailed error handling
     let requestBody;
     try {
-      requestBody = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      if (typeof req.body === 'string') {
+        log('Parsing string body');
+        requestBody = JSON.parse(req.body);
+      } else {
+        log('Body is already an object');
+        requestBody = req.body;
+      }
+      log(`Parsed body: ${JSON.stringify(requestBody)}`);
     } catch (parseError) {
+      error(`JSON parse error: ${parseError.message}`);
       return res.json({ 
-        error: 'Invalid JSON in request body' 
+        error: 'Invalid JSON in request body',
+        message: parseError.message
       }, 400);
     }
 
-    const { userId, includePreferences = true, includeMetadata = false } = requestBody;
-    console.log(requestBody)
-    // Enhanced validation
-    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
+    // Extract parameters with logging
+    const { userId, includePreferences = true, includeMetadata = false } = requestBody || {};
+    
+    log(`UserId: ${userId}`);
+    log(`Include preferences: ${includePreferences}`);
+    log(`Include metadata: ${includeMetadata}`);
+    
+    // Validate userId
+    if (!userId) {
+      log('UserId is missing');
       return res.json({ 
-        error: 'userId parameter is required and must be a non-empty string' 
+        error: 'Missing required parameter',
+        message: 'userId is required'
+      }, 400);
+    }
+
+    if (typeof userId !== 'string') {
+      log(`UserId is not a string: ${typeof userId}`);
+      return res.json({ 
+        error: 'Invalid parameter type',
+        message: `userId must be a string, received ${typeof userId}`
       }, 400);
     }
 
     const sanitizedUserId = userId.trim();
-
-    console.console.log(`Searching for user with ID containing: ${sanitizedUserId}`);
-
-    // Build query to search for user ID using contains - pass queries as array directly
-    let queries = [
-      Query.contains('$id', sanitizedUserId),
-      Query.limit(1) // Only return first match
-    ];
-
-    // Search users from Appwrite
-    const userList = await users.list(queries);
-
-    // Check if user found
-    if (!userList.users || userList.users.length === 0) {
+    
+    if (sanitizedUserId.length === 0) {
+      log('UserId is empty after trimming');
       return res.json({ 
-        error: 'User not found',
-        message: 'No user exists with the provided ID'
-      }, 404);
+        error: 'Invalid parameter',
+        message: 'userId cannot be empty'
+      }, 400);
     }
 
-    const user = userList.users[0]; // Get first match
+    log(`Attempting to fetch user with ID: ${sanitizedUserId}`);
 
-    // Enhanced data sanitization with null safety
+    // Fetch user with detailed error catching
+    let user;
+    try {
+      user = await users.get(sanitizedUserId);
+      log(`User fetched successfully: ${user.$id}`);
+    } catch (fetchError) {
+      error(`User fetch failed: ${fetchError.message}`);
+      error(`Error code: ${fetchError.code}`);
+      error(`Error type: ${fetchError.type}`);
+      
+      // Handle specific Appwrite errors
+      if (fetchError.code === 404) {
+        return res.json({ 
+          error: 'User not found',
+          message: `No user exists with ID: ${sanitizedUserId}`
+        }, 404);
+      }
+      
+      if (fetchError.code === 401) {
+        return res.json({ 
+          error: 'Unauthorized',
+          message: 'Invalid API key or insufficient permissions'
+        }, 401);
+      }
+      
+      throw fetchError; // Re-throw for general error handler
+    }
+
+    // Build response
+    log('Building sanitized response');
+    
     const sanitizedUser = {
       $id: user.$id || '',
       name: user.name || '',
@@ -94,27 +179,23 @@ export default async ({ req, res, log, error }) => {
       labels: user.labels || [],
     };
 
-    // Conditionally include preferences
+    // Add preferences if requested
     if (includePreferences && user.prefs) {
-      sanitizedUser.preferences = {
-        bio: user.prefs.bio || '',
-        profilePictureId: user.prefs.profilePictureId || '',
-        theme: user.prefs.theme || 'light',
-        language: user.prefs.language || 'en',
-        ...user.prefs
-      };
+      sanitizedUser.preferences = user.prefs;
+      log('Preferences included');
     }
 
-    // Conditionally include metadata (timestamps, etc.)
+    // Add metadata if requested
     if (includeMetadata) {
       sanitizedUser.metadata = {
         $createdAt: user.$createdAt || '',
         $updatedAt: user.$updatedAt || '',
         accessedAt: user.accessedAt || ''
       };
+      log('Metadata included');
     }
 
-    console.log(`Successfully retrieved user data for: ${sanitizedUser.name || 'Unknown'}`);
+    log('Returning success response');
 
     return res.json({
       success: true,
@@ -123,58 +204,13 @@ export default async ({ req, res, log, error }) => {
     });
 
   } catch (err) {
-    // Enhanced error logging
-    error(`Function execution failed: ${err.message}`, {
-      stack: err.stack,
-      code: err.code,
-      type: err.type
-    });
-
-    // Handle specific error types
-    if (err.code === 401) {
-      console.log("Unathorized access");
-      return res.json({ 
-        error: 'Unauthorized access',
-        message: 'Invalid API key or insufficient permissions'
-      }, 401);
-    }
-
-    if (err.code === 404) {
-      console.log("User not found");
-      return res.json({ 
-        error: 'User not found',
-        message: 'No user exists with the provided ID'
-      }, 404);
-    }
-
-    if (err.code === 429) {
-      console.log("Rate limit exceeded");
-      return res.json({ 
-        error: 'Rate limit exceeded',
-        message: 'Too many requests. Please try again later.'
-      }, 429);
-    }
-
-    if (err.code === 400) {
-      console.log("Invalid user ID format or parameter");
-      return res.json({ 
-        error: 'Bad request',
-        message: 'Invalid user ID format or parameter'
-      }, 400);
-    }
-
-    if (err.message && err.message.includes('fulltext index')) {
-      console.log("Search index not configured");
-      return res.json({ 
-        error: 'Search index not configured',
-        message: 'Fulltext index required for search operations. Using alternative query methods.'
-      }, 400);
-    }
-
-    // Generic error response
+    error(`Unhandled error: ${err.message}`);
+    error(`Stack: ${err.stack}`);
+    
     return res.json({ 
-      error: 'Failed to fetch user',
-      message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+      error: 'Internal server error',
+      message: err.message,
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
     }, 500);
   }
 };
