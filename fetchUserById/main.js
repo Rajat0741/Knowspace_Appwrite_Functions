@@ -38,7 +38,7 @@ export default async ({ req, res, log, error }) => {
     const sanitizedUserId = userId.trim();
 
     // Validate user ID format (basic check for Appwrite ID format)
-    if (sanitizedUserId.length < 20 || !/^[a-zA-Z0-9]+$/.test(sanitizedUserId)) {
+    if (sanitizedUserId.length < 19 || !/^[a-zA-Z0-9]+$/.test(sanitizedUserId)) {
       return res.json({ 
         error: 'Invalid user ID format' 
       }, 400);
