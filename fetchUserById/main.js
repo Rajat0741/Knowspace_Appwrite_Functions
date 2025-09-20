@@ -1,6 +1,28 @@
 import { Client, Users, Query } from 'node-appwrite';
 
 export default async ({ req, res, log, error }) => {
+  // Validate environment variables
+  if (!process.env.APPWRITE_FUNCTION_ENDPOINT) {
+    return res.json({ 
+      error: 'Missing configuration',
+      message: 'APPWRITE_FUNCTION_ENDPOINT is not set'
+    }, 500);
+  }
+
+  if (!process.env.APPWRITE_FUNCTION_PROJECT_ID) {
+    return res.json({ 
+      error: 'Missing configuration', 
+      message: 'APPWRITE_FUNCTION_PROJECT_ID is not set'
+    }, 500);
+  }
+
+  if (!process.env.APPWRITE_FUNCTION_API_KEY) {
+    return res.json({ 
+      error: 'Missing configuration',
+      message: 'APPWRITE_FUNCTION_API_KEY is not set'
+    }, 500);
+  }
+
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_FUNCTION_ENDPOINT)
     .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
@@ -39,23 +61,14 @@ export default async ({ req, res, log, error }) => {
 
     log(`Searching for user with ID containing: ${sanitizedUserId}`);
 
-    // Build query to search for user ID using contains
-    let queries = [];
-    
-    try {
-      queries.push(Query.contains('$id', sanitizedUserId));
-      queries.push(Query.limit(1)); // Only return first match
-    } catch (queryError) {
-      return res.json({ 
-        error: 'Failed to build query',
-        message: queryError.message
-      }, 400);
-    }
+    // Build query to search for user ID using contains - pass queries as array directly
+    let queries = [
+      Query.contains('$id', sanitizedUserId),
+      Query.limit(1) // Only return first match
+    ];
 
     // Search users from Appwrite
-    const userList = await users.list({
-      queries: queries
-    });
+    const userList = await users.list(queries);
 
     // Check if user found
     if (!userList.users || userList.users.length === 0) {
@@ -125,11 +138,11 @@ export default async ({ req, res, log, error }) => {
       }, 401);
     }
 
-    if (err.code === 400) {
+    if (err.code === 404) {
       return res.json({ 
-        error: 'Bad request',
-        message: 'Invalid query parameters or search criteria'
-      }, 400);
+        error: 'User not found',
+        message: 'No user exists with the provided ID'
+      }, 404);
     }
 
     if (err.code === 429) {
@@ -139,17 +152,23 @@ export default async ({ req, res, log, error }) => {
       }, 429);
     }
 
-    // Handle query-specific errors
-    if (err.message && err.message.includes('Invalid query')) {
+    if (err.code === 400) {
       return res.json({ 
-        error: 'Invalid search query',
-        message: 'The search parameters provided are not valid for the specified field'
+        error: 'Bad request',
+        message: 'Invalid user ID format or parameter'
+      }, 400);
+    }
+
+    if (err.message && err.message.includes('fulltext index')) {
+      return res.json({ 
+        error: 'Search index not configured',
+        message: 'Fulltext index required for search operations. Using alternative query methods.'
       }, 400);
     }
 
     // Generic error response
     return res.json({ 
-      error: 'Failed to search users',
+      error: 'Failed to fetch user',
       message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     }, 500);
   }
