@@ -132,6 +132,7 @@ export default async ({ req, res, log, error }) => {
 
     // Handle specific error types
     if (err.code === 401) {
+      log("Unathorized access");
       return res.json({ 
         error: 'Unauthorized access',
         message: 'Invalid API key or insufficient permissions'
@@ -139,6 +140,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     if (err.code === 404) {
+      log("User not found");
       return res.json({ 
         error: 'User not found',
         message: 'No user exists with the provided ID'
@@ -146,6 +148,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     if (err.code === 429) {
+      log("Rate limit exceeded");
       return res.json({ 
         error: 'Rate limit exceeded',
         message: 'Too many requests. Please try again later.'
@@ -153,6 +156,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     if (err.code === 400) {
+      log("Invalid user ID format or parameter");
       return res.json({ 
         error: 'Bad request',
         message: 'Invalid user ID format or parameter'
@@ -160,6 +164,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     if (err.message && err.message.includes('fulltext index')) {
+      log("Search index not configured");
       return res.json({ 
         error: 'Search index not configured',
         message: 'Fulltext index required for search operations. Using alternative query methods.'
