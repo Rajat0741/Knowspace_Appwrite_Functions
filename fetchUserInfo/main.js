@@ -49,7 +49,6 @@ export default async ({ req, res, log, error }) => {
     }
 
     const { userId, includePreferences = true, includeMetadata = false } = requestBody;
-    console.context.log(requestBody);
     
     // Enhanced validation
     if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
