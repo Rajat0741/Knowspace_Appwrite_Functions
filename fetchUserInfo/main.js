@@ -49,7 +49,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     const { userId, includePreferences = true, includeMetadata = false } = requestBody;
-    console.log(requestBody);
+    console.context.log(requestBody);
     
     // Enhanced validation
     if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
@@ -60,7 +60,7 @@ export default async ({ req, res, log, error }) => {
 
     const sanitizedUserId = userId.trim();
 
-    console.log(`Fetching user with ID: ${sanitizedUserId}`);
+    console.context.log(`Fetching user with ID: ${sanitizedUserId}`);
 
     // Use the direct users.get() method to fetch user by ID
     const user = await users.get(sanitizedUserId);
@@ -99,7 +99,7 @@ export default async ({ req, res, log, error }) => {
       };
     }
 
-    console.log(`Successfully retrieved user data for: ${sanitizedUser.name || 'Unknown'}`);
+    console.context.log(`Successfully retrieved user data for: ${sanitizedUser.name || 'Unknown'}`);
 
     return res.json({
       success: true,
@@ -117,7 +117,7 @@ export default async ({ req, res, log, error }) => {
 
     // Handle specific error types
     if (err.code === 401) {
-      console.log("Unauthorized access");
+      console.context.log("Unauthorized access");
       return res.json({ 
         error: 'Unauthorized access',
         message: 'Invalid API key or insufficient permissions'
@@ -125,7 +125,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     if (err.code === 404) {
-      console.log("User not found");
+      console.context.log("User not found");
       return res.json({ 
         error: 'User not found',
         message: 'No user exists with the provided ID'
@@ -133,7 +133,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     if (err.code === 429) {
-      console.log("Rate limit exceeded");
+      console.context.log("Rate limit exceeded");
       return res.json({ 
         error: 'Rate limit exceeded',
         message: 'Too many requests. Please try again later.'
@@ -141,7 +141,7 @@ export default async ({ req, res, log, error }) => {
     }
 
     if (err.code === 400) {
-      console.log("Invalid user ID format or parameter");
+      console.context.log("Invalid user ID format or parameter");
       return res.json({ 
         error: 'Bad request',
         message: 'Invalid user ID format or parameter'
