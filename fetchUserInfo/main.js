@@ -1,13 +1,35 @@
-import { Client, Users, Query } from 'node-appwrite';
+import { Client, Users } from 'node-appwrite';
 
 export default async ({ req, res, log, error }) => {
+  // Validate environment variables
+  if (!process.env.APPWRITE_FUNCTION_ENDPOINT) {
+    return res.json({ 
+      error: 'Missing configuration',
+      message: 'APPWRITE_FUNCTION_ENDPOINT is not set'
+    }, 500);
+  }
+
+  if (!process.env.APPWRITE_FUNCTION_PROJECT_ID) {
+    return res.json({ 
+      error: 'Missing configuration', 
+      message: 'APPWRITE_FUNCTION_PROJECT_ID is not set'
+    }, 500);
+  }
+
+  if (!process.env.APPWRITE_FUNCTION_API_KEY) {
+    return res.json({ 
+      error: 'Missing configuration',
+      message: 'APPWRITE_FUNCTION_API_KEY is not set'
+    }, 500);
+  }
+
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_FUNCTION_ENDPOINT)
     .setProject(process.env.APPWRITE_FUNCTION_PROJECT_ID)
     .setKey(process.env.APPWRITE_FUNCTION_API_KEY);
-  
+
   const users = new Users(client);
-  
+
   try {
     // Validate request method
     if (req.method !== 'POST') {
@@ -26,85 +48,63 @@ export default async ({ req, res, log, error }) => {
       }, 400);
     }
 
-    const { name, limit = 25, offset = 0, searchType = 'contains' } = requestBody;
+    const { userId, includePreferences = true, includeMetadata = false } = requestBody;
+    console.log(requestBody);
     
     // Enhanced validation
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
       return res.json({ 
-        error: 'Name parameter is required and must be a non-empty string' 
+        error: 'userId parameter is required and must be a non-empty string' 
       }, 400);
     }
 
-    // Sanitize and validate pagination parameters
-    const sanitizedLimit = Math.min(Math.max(parseInt(limit) || 25, 1), 100);
-    const sanitizedOffset = Math.max(parseInt(offset) || 0, 0);
-    const sanitizedName = name.trim();
-    
-    // Validate name length
-    if (sanitizedName.length < 2) {
-      return res.json({ 
-        error: 'Name must be at least 2 characters long' 
-      }, 400);
-    }
+    const sanitizedUserId = userId.trim();
 
-    log(`Searching for users with name: "${sanitizedName}", limit: ${sanitizedLimit}, offset: ${sanitizedOffset}`);
-    
-    // Build queries WITHOUT using Query.search() to avoid fulltext index requirement
-    let queries = [];
-    
-    // Choose search strategy based on searchType parameter
-    switch (searchType) {
-      case 'exact':
-        queries.push(Query.equal('name', [sanitizedName]));
-        break;
-      case 'startsWith':
-        queries.push(Query.startsWith('name', sanitizedName));
-        break;
-      case 'contains':
-      default:
-        // Use contains for partial matching (works without fulltext index)
-        queries.push(Query.contains('name', sanitizedName));
-        break;
-    }
-    
-    // Add pagination
-    queries.push(Query.limit(sanitizedLimit));
-    queries.push(Query.offset(sanitizedOffset));
-    
-    // Optional: Add ordering if you want consistent results
-    // Note: This requires an index on 'name' attribute for sorting
-    // queries.push(Query.orderAsc('name'));
+    console.log(`Fetching user with ID: ${sanitizedUserId}`);
 
-    // Fetch users from Appwrite
-    const response = await users.list(queries);
-    
+    // Use the direct users.get() method to fetch user by ID
+    const user = await users.get(sanitizedUserId);
+
     // Enhanced data sanitization with null safety
-    const sanitizedUsers = response.users.map(user => ({
+    const sanitizedUser = {
       $id: user.$id || '',
       name: user.name || '',
-      bio: user.prefs?.bio || '',
+      email: user.email || '',
+      phone: user.phone || '',
       registration: user.registration || '',
-      profilePictureId: user.prefs?.profilePictureId || '',
-    }));
+      status: user.status !== undefined ? user.status : true,
+      passwordUpdate: user.passwordUpdate || '',
+      emailVerification: user.emailVerification || false,
+      phoneVerification: user.phoneVerification || false,
+      labels: user.labels || [],
+    };
 
-    const totalUsers = response.total || 0;
-    const nextOffset = sanitizedOffset + sanitizedUsers.length;
-    const hasMore = nextOffset < totalUsers;
+    // Conditionally include preferences
+    if (includePreferences && user.prefs) {
+      sanitizedUser.preferences = {
+        bio: user.prefs.bio || '',
+        profilePictureId: user.prefs.profilePictureId || '',
+        theme: user.prefs.theme || 'light',
+        language: user.prefs.language || 'en',
+        ...user.prefs
+      };
+    }
 
-    log(`Found ${sanitizedUsers.length} users out of ${totalUsers} total`);
+    // Conditionally include metadata (timestamps, etc.)
+    if (includeMetadata) {
+      sanitizedUser.metadata = {
+        $createdAt: user.$createdAt || '',
+        $updatedAt: user.$updatedAt || '',
+        accessedAt: user.accessedAt || ''
+      };
+    }
+
+    console.log(`Successfully retrieved user data for: ${sanitizedUser.name || 'Unknown'}`);
 
     return res.json({
       success: true,
-      users: sanitizedUsers,
-      pagination: {
-        total: totalUsers,
-        limit: sanitizedLimit,
-        offset: sanitizedOffset,
-        hasMore,
-        nextOffset: hasMore ? nextOffset : null,
-        page: Math.floor(sanitizedOffset / sanitizedLimit) + 1,
-        totalPages: Math.ceil(totalUsers / sanitizedLimit)
-      }
+      user: sanitizedUser,
+      retrieved: new Date().toISOString()
     });
 
   } catch (err) {
@@ -117,30 +117,40 @@ export default async ({ req, res, log, error }) => {
 
     // Handle specific error types
     if (err.code === 401) {
+      console.log("Unauthorized access");
       return res.json({ 
         error: 'Unauthorized access',
         message: 'Invalid API key or insufficient permissions'
       }, 401);
     }
 
+    if (err.code === 404) {
+      console.log("User not found");
+      return res.json({ 
+        error: 'User not found',
+        message: 'No user exists with the provided ID'
+      }, 404);
+    }
+
     if (err.code === 429) {
+      console.log("Rate limit exceeded");
       return res.json({ 
         error: 'Rate limit exceeded',
         message: 'Too many requests. Please try again later.'
       }, 429);
     }
 
-    if (err.message && err.message.includes('fulltext index')) {
+    if (err.code === 400) {
+      console.log("Invalid user ID format or parameter");
       return res.json({ 
-        error: 'Search index not configured',
-        message: 'Fulltext index required for search operations. Using alternative query methods.',
-        suggestion: 'Create a fulltext index on the name attribute or use searchType: "contains", "startsWith", or "exact"'
+        error: 'Bad request',
+        message: 'Invalid user ID format or parameter'
       }, 400);
     }
 
     // Generic error response
     return res.json({ 
-      error: 'Failed to fetch users',
+      error: 'Failed to fetch user',
       message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
     }, 500);
   }
