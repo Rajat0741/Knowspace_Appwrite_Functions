@@ -1,0 +1,16 @@
+{
+  "name": "imagekit",
+  "version": "1.0.0",
+  "description": "Combined ImageKit operations - authentication and file deletion",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --write ."
+  },
+  "dependencies": {
+    "imagekit": "^5.2.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0"
+  }
+}
