@@ -22,7 +22,7 @@ const CONFIG = {
     RERANK_URL: 'https://api.langsearch.com/v1/rerank'
   },
   STATUS: {
-    IN_PROGRESS: 'inprogress',
+    IN_PROGRESS: 'in_progress',
     FAILED: 'failed',
     COMPLETED: 'completed'
   },
@@ -298,11 +298,60 @@ async function generateArticleContent(prompt, title, sources, category, requestT
   }
 }
 
-// Build prompts: (see prior code for full structure, unchanged)
-function buildSystemPrompt(title, category, sources) { /* ... */ }
-function buildCompletePrompt(systemPrompt, userPrompt, sources) { /* ... */ }
+// Build prompts
+function buildSystemPrompt(title, category, sources) {
+  let prompt = `You are an expert content writer creating a comprehensive, engaging blog article.
 
-// ...and any other utility/handler helpers as before
+ARTICLE DETAILS:
+- Title: "${title}"
+- Category: "${category}"
+
+REQUIREMENTS:
+- Write a complete, well-structured article with proper HTML formatting for TinyMCE editor
+- Use semantic HTML tags: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <blockquote>
+- MUST include at least one <h2> or <p> tag (required for validation)
+- Create engaging, informative content with clear section headings
+- Include relevant examples, explanations, and insights
+- Write in a professional yet accessible tone
+- Ensure proper grammar, spelling, and punctuation
+
+OUTPUT FORMAT:
+- Return ONLY the HTML content (no markdown, no code blocks)
+- Start directly with content (no "Here's the article" or similar phrases)
+- Use proper HTML structure with meaningful semantic tags`;
+
+  if (sources && sources.length > 0) {
+    prompt += `\n\nREFERENCE SOURCES:
+These sources have been provided for context and factual grounding. Use them to ensure accuracy:
+${sources.map((url, i) => `${i + 1}. ${url}`).join('\n')}
+
+Note: Verify facts against these sources but write in your own words. Do not copy content directly.`;
+  }
+
+  return prompt;
+}
+
+function buildCompletePrompt(systemPrompt, userPrompt, sources) {
+  const contents = [
+    {
+      role: 'user',
+      parts: [{ text: systemPrompt }]
+    },
+    {
+      role: 'user',
+      parts: [{ text: `USER INSTRUCTIONS:\n${userPrompt}` }]
+    }
+  ];
+
+  if (sources && sources.length > 0) {
+    contents.push({
+      role: 'user',
+      parts: [{ text: `SOURCES TO REFERENCE:\n${sources.join('\n')}` }]
+    });
+  }
+
+  return contents;
+}
 
 async function decrementUserQuota(userId, requestType, log, error) {
   try {
