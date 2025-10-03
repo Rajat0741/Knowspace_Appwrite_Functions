@@ -60,17 +60,23 @@ function getUsageFieldForRequestType(requestType) {
   }
 }
 
-export default async ({ req, res, log, error }) => {
-  // Set CORS headers for all responses
-  res.headers['Access-Control-Allow-Origin'] = '*';
-  res.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-  res.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Appwrite-Project, X-Appwrite-Key, X-Appwrite-Response-Format';
-  res.headers['Access-Control-Max-Age'] = '86400';
+// Helper: Get CORS headers
+function getCORSHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Appwrite-Project, X-Appwrite-Key, X-Appwrite-Response-Format'
+  };
+}
 
-  // Handle preflight OPTIONS request
+export default async ({ req, res, log, error }) => {
+  // Handle preflight OPTIONS request for CORS
   if (req.method === 'OPTIONS') {
     log('Handling CORS preflight request');
-    return res.empty();
+    return res.json({}, 200, {
+      ...getCORSHeaders(),
+      'Access-Control-Max-Age': '86400'
+    });
   }
 
   let trackingDocId = null;
@@ -103,12 +109,12 @@ export default async ({ req, res, log, error }) => {
     if (!userId || !prompt || !title || !category) {
       error('Missing required fields validation failed');
       log(`Missing fields - userId: ${!!userId}, prompt: ${!!prompt}, title: ${!!title}, category: ${!!category}`);
-      return res.json({ success: false, error: 'Missing required fields: userId, prompt, title, category' }, 400);
+      return res.json({ success: false, error: 'Missing required fields: userId, prompt, title, category' }, 400, getCORSHeaders());
     }
     
     if (!CONFIG.MAX_OUTPUT_TOKENS[style]) {
       error(`Invalid style validation failed: ${style}`);
-      return res.json({ success: false, error: 'Invalid style. Must be short, moderate, or long' }, 400);
+      return res.json({ success: false, error: 'Invalid style. Must be short, moderate, or long' }, 400, getCORSHeaders());
     }
     
     log('✓ All request parameters validated successfully');
@@ -118,7 +124,7 @@ export default async ({ req, res, log, error }) => {
     const canProceed = await checkUserPreferences(userId, requestType, log, error);
     if (!canProceed.success) {
       error(`User preference check failed: ${canProceed.error}`);
-      return res.json({ success: false, error: canProceed.error }, 403);
+      return res.json({ success: false, error: canProceed.error }, 403, getCORSHeaders());
     }
     log('✓ User preferences check passed');
 
@@ -129,7 +135,7 @@ export default async ({ req, res, log, error }) => {
     );
     if (!trackingDoc.success) {
       error('Failed to create tracking document');
-      return res.json({ success: false, error: 'Failed to create tracking document' }, 500);
+      return res.json({ success: false, error: 'Failed to create tracking document' }, 500, getCORSHeaders());
     }
     trackingDocId = trackingDoc.documentId;
     log(`✓ Tracking document created with ID: ${trackingDocId}`);
@@ -142,7 +148,7 @@ export default async ({ req, res, log, error }) => {
     if (!generatedContent.success) {
       error(`Content generation failed: ${generatedContent.error}`);
       await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, generatedContent.error, null, log, error);
-      return res.json({ success: false, error: generatedContent.error }, 500);
+      return res.json({ success: false, error: generatedContent.error }, 500, getCORSHeaders());
     }
     log(`✓ Content generated successfully, length: ${generatedContent.content.length} characters`);
 
@@ -167,7 +173,7 @@ export default async ({ req, res, log, error }) => {
       const validationError = 'Content validation failed: must include <h2> or <p> tags for TinyMCE compatibility';
       error(validationError);
       await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, validationError, null, log, error);
-      return res.json({ success: false, error: validationError }, 500);
+      return res.json({ success: false, error: validationError }, 500, getCORSHeaders());
     }
     log('✓ HTML content validation passed');
 
@@ -182,7 +188,7 @@ export default async ({ req, res, log, error }) => {
     if (!articleDoc.success) {
       error('Failed to create article document');
       await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, 'Failed to create article document', null, log, error);
-      return res.json({ success: false, error: 'Failed to create article document' }, 500);
+      return res.json({ success: false, error: 'Failed to create article document' }, 500, getCORSHeaders());
     }
     log(`✓ Article document created with ID: ${articleDoc.documentId}`);
     
@@ -204,7 +210,7 @@ export default async ({ req, res, log, error }) => {
       message: 'Article generated successfully',
       trackingId: trackingDocId,
       articleId: articleDoc.documentId
-    }, 200);
+    }, 200, getCORSHeaders());
 
   } catch (err) {
     error(`=== FATAL FUNCTION ERROR ===`);
@@ -217,7 +223,7 @@ export default async ({ req, res, log, error }) => {
       await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, err.message, null, log, error);
     }
     
-    return res.json({ success: false, error: err.message }, 500);
+    return res.json({ success: false, error: err.message }, 500, getCORSHeaders());
   }
 };
 
