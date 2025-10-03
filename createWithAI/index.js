@@ -1,8 +1,5 @@
-/* eslint-env node */
-/* global process */
-
 import { Client, Databases, ID, Query, Users } from 'node-appwrite';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 
 /**
  * Appwrite Function: Enhanced AI Content Generator
@@ -34,15 +31,6 @@ const CONFIG = {
     TRACKING: process.env.TRACKING_COLLECTION_ID
   }
 };
-
-const TRACKING_CATEGORY_ALLOWLIST = new Set([
-  'Technology',
-  'Programming',
-  'Design',
-  'Tutorials',
-  'News',
-  'Reviews'
-]);
 
 // Initialize Appwrite SDK
 const client = new Client()
@@ -78,13 +66,6 @@ export default async ({ req, res, log, error }) => {
     if (!userId || !prompt || !title || !category) {
       return res.json({ success: false, error: 'Missing required fields: userId, prompt, title, category' }, 400);
     }
-    const normalizedCategory = String(category).trim();
-    if (!TRACKING_CATEGORY_ALLOWLIST.has(normalizedCategory)) {
-      return res.json({ success: false, error: 'Invalid category selection' }, 400);
-    }
-    if (!CONFIG.MODELS[requestType]) {
-      return res.json({ success: false, error: 'Invalid request type. Must be basic, pro, or ultra' }, 400);
-    }
     if (!CONFIG.MAX_OUTPUT_TOKENS[style]) {
       return res.json({ success: false, error: 'Invalid style. Must be short, moderate, or long' }, 400);
     }
@@ -97,7 +78,7 @@ export default async ({ req, res, log, error }) => {
 
     // 2. Create tracking doc with inprogress + blank error
     const trackingDoc = await createTrackingDocument(
-      userId, title, prompt, normalizedCategory, requestType, style, sources, log, error
+      userId, title, prompt, category, requestType, style, sources, log, error
     );
     if (!trackingDoc.success) {
       return res.json({ success: false, error: 'Failed to create tracking document' }, 500);
@@ -106,10 +87,10 @@ export default async ({ req, res, log, error }) => {
     
     // 3. Generate content (Gemini)
     let generatedContent = await generateArticleContent(
-      prompt, title, sources, normalizedCategory, requestType, style, log, error
+      prompt, title, sources, category, requestType, style, log, error
     );
     if (!generatedContent.success) {
-      await markTrackingFailure(trackingDocId, generatedContent.error, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, generatedContent.error, null, log, error);
       return res.json({ success: false, error: generatedContent.error }, 500);
     }
 
@@ -127,17 +108,17 @@ export default async ({ req, res, log, error }) => {
     // 5. Validate HTML (must contain <h2> or <p>)
     if (!isValidHTMLContent(generatedContent.content)) {
       const validationError = 'Content validation failed: must include <h2> or <p> tags for TinyMCE compatibility';
-      await markTrackingFailure(trackingDocId, validationError, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, validationError, null, log, error);
       return res.json({ success: false, error: validationError }, 500);
     }
 
     // 6. Create article (status: inactive)
     const userDetails = await getUserDetails(userId, log, error);
     const articleDoc = await createArticleDocument(
-      userId, title, generatedContent.content, normalizedCategory, sources, userDetails.authorName, log, error
+      userId, title, generatedContent.content, category, sources, userDetails.authorName, log, error
     );
     if (!articleDoc.success) {
-      await markTrackingFailure(trackingDocId, 'Failed to create article document', log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, 'Failed to create article document', null, log, error);
       return res.json({ success: false, error: 'Failed to create article document' }, 500);
     }
     // 7. update tracking (completed, clear error, link postId)
@@ -156,7 +137,7 @@ export default async ({ req, res, log, error }) => {
   } catch (err) {
     error(`Fatal function error: ${err.message}`);
     if (trackingDocId) {
-      await markTrackingFailure(trackingDocId, err.message, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, err.message, null, log, error);
     }
     return res.json({ success: false, error: err.message }, 500);
   }
@@ -254,10 +235,6 @@ async function updateTrackingStatus(trackingId, status, errorMessage, postId, lo
   } catch (err) {
     error(`Tracking status update error: ${err.message}`);
   }
-}
-
-async function markTrackingFailure(trackingId, errorMessage, log, error) {
-  await updateTrackingStatus(trackingId, CONFIG.STATUS.COMPLETED, errorMessage, null, log, error);
 }
 
 // ... (Other helper functions remain as in your current code)
