@@ -327,7 +327,7 @@ async function checkUserPreferences(userId, requestType, log, error) {
     try {
       // Get user preferences using the correct Appwrite API
       log(`Fetching preferences for user: ${userId}`);
-      userPrefs = await users.getPrefs(userId);
+      userPrefs = await users.getPrefs({ userId: userId });
       log(`User preferences retrieved successfully`);
     } catch (prefsError) {
       // If user has no preferences set, create default ones
@@ -676,7 +676,7 @@ async function decrementUserQuota(userId, requestType, log, error) {
     
     try {
       // Get current user preferences
-      currentPrefs = await users.getPrefs(userId);
+      currentPrefs = await users.getPrefs({ userId: userId });
     } catch (prefsError) {
       // If user has no preferences, create default ones
       if (prefsError.code === 404 || prefsError.message.includes('not found')) {
@@ -702,7 +702,7 @@ async function decrementUserQuota(userId, requestType, log, error) {
     
     // Update user preferences with new quota
     const updatedPrefs = { ...currentPrefs, [usageField]: newUses };
-    await users.updatePrefs(userId, updatedPrefs);
+    await users.updatePrefs({ userId: userId, prefs: updatedPrefs });
     
     log(`User quota updated: ${usageField} = ${newUses}`);
   } catch (err) { 
