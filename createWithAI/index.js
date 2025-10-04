@@ -23,7 +23,8 @@ const CONFIG = {
   },
   STATUS: {
     IN_PROGRESS: 'inprogress',
-    COMPLETED: 'completed'
+    COMPLETED: 'completed',
+    FAILED: 'failed'
   },
   DATABASE_ID: process.env.DATABASE_ID,
   COLLECTIONS: {
@@ -147,7 +148,7 @@ export default async ({ req, res, log, error }) => {
     );
     if (!generatedContent.success) {
       error(`Content generation failed: ${generatedContent.error}`);
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, generatedContent.error, null, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, generatedContent.error, null, log, error);
       return res.json({ success: false, error: generatedContent.error }, 500, getCORSHeaders());
     }
     log(`✓ Content generated successfully, length: ${generatedContent.content.length} characters`);
@@ -172,7 +173,7 @@ export default async ({ req, res, log, error }) => {
     if (!isValidHTMLContent(generatedContent.content)) {
       const validationError = 'Content validation failed: must include <h2> or <p> tags for TinyMCE compatibility';
       error(validationError);
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, validationError, null, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, validationError, null, log, error);
       return res.json({ success: false, error: validationError }, 500, getCORSHeaders());
     }
     log('✓ HTML content validation passed');
@@ -187,7 +188,7 @@ export default async ({ req, res, log, error }) => {
     );
     if (!articleDoc.success) {
       error('Failed to create article document');
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, 'Failed to create article document', null, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, 'Failed to create article document', null, log, error);
       return res.json({ success: false, error: 'Failed to create article document' }, 500, getCORSHeaders());
     }
     log(`✓ Article document created with ID: ${articleDoc.documentId}`);
@@ -220,7 +221,7 @@ export default async ({ req, res, log, error }) => {
     
     if (trackingDocId) {
       log(`Updating tracking document ${trackingDocId} with error status`);
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, err.message, null, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, err.message, null, log, error);
     }
     
     return res.json({ success: false, error: err.message }, 500, getCORSHeaders());
@@ -544,7 +545,7 @@ async function generateArticleContent(prompt, title, sources, category, requestT
     log(`Selected model: ${modelName}`);
     log(`Max output tokens: ${maxTokens}`);
     
-    const systemPrompt = buildSystemPrompt(title, category, sources);
+    const systemPrompt = buildSystemPrompt(title, category, sources, style);
     log(`System prompt length: ${systemPrompt.length} characters`);
     
     const tools = [
