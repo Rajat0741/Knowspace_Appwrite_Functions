@@ -16,14 +16,10 @@ const CONFIG = {
     moderate: 45000,
     extended: 60000
   },
-  LANGSEARCH: {
-    MAX_RESULTS: 20,
-    SEARCH_URL: 'https://api.langsearch.com/v1/web-search',
-    RERANK_URL: 'https://api.langsearch.com/v1/rerank'
-  },
   STATUS: {
     IN_PROGRESS: 'inprogress',
-    COMPLETED: 'completed'
+    COMPLETED: 'completed',
+    FAILED: 'failed'
   },
   DATABASE_ID: process.env.DATABASE_ID,
   COLLECTIONS: {
@@ -147,32 +143,18 @@ export default async ({ req, res, log, error }) => {
     );
     if (!generatedContent.success) {
       error(`Content generation failed: ${generatedContent.error}`);
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, generatedContent.error, null, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, generatedContent.error, null, log, error);
       return res.json({ success: false, error: generatedContent.error }, 500, getCORSHeaders());
     }
     log(`✓ Content generated successfully, length: ${generatedContent.content.length} characters`);
 
-    // 4. Ultra → RAG semantic rerank (LangSearch API)
-    if (requestType === 'ultra') {
-      log('=== STEP 4: APPLYING RAG RERANK (ULTRA MODE) ===');
-      const rerankRes = await ragRerankWithLangSearch(prompt, generatedContent.content, sources, log, error);
-      if (rerankRes.success) {
-        log(`✓ RAG rerank successful, content length: ${rerankRes.reranked.length} characters`);
-        generatedContent.content = rerankRes.reranked;
-      } else {
-        log('⚠ LangSearch RAG rerank failed, keeping Gemini output');
-        // fallback: keep Gemini output, log error but do not fail outright
-      }
-    } else {
-      log(`=== STEP 4: SKIPPING RAG RERANK (${requestType.toUpperCase()} MODE) ===`);
-    }
 
     // 5. Validate HTML (must contain <h2> or <p>)
     log('=== STEP 5: VALIDATING HTML CONTENT ===');
     if (!isValidHTMLContent(generatedContent.content)) {
       const validationError = 'Content validation failed: must include <h2> or <p> tags for TinyMCE compatibility';
       error(validationError);
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, validationError, null, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, validationError, null, log, error);
       return res.json({ success: false, error: validationError }, 500, getCORSHeaders());
     }
     log('✓ HTML content validation passed');
@@ -187,7 +169,7 @@ export default async ({ req, res, log, error }) => {
     );
     if (!articleDoc.success) {
       error('Failed to create article document');
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, 'Failed to create article document', null, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, 'Failed to create article document', null, log, error);
       return res.json({ success: false, error: 'Failed to create article document' }, 500, getCORSHeaders());
     }
     log(`✓ Article document created with ID: ${articleDoc.documentId}`);
@@ -220,7 +202,7 @@ export default async ({ req, res, log, error }) => {
     
     if (trackingDocId) {
       log(`Updating tracking document ${trackingDocId} with error status`);
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, err.message, null, log, error);
+      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, err.message, null, log, error);
     }
     
     return res.json({ success: false, error: err.message }, 500, getCORSHeaders());
@@ -251,64 +233,6 @@ function isValidHTMLContent(html) {
   return isValid;
 }
 
-// RAG rerank for ultra requests
-async function ragRerankWithLangSearch(query, text, urls, log, error) {
-  try {
-    log('--- RAG RERANK FUNCTION START ---');
-    log(`Query length: ${query ? query.length : 0} characters`);
-    log(`Text length: ${text ? text.length : 0} characters`);
-    log(`URLs count: ${urls ? urls.length : 0}`);
-    log(`URLs: ${JSON.stringify(urls)}`);
-    
-    if (!(query && text && urls && urls.length)) {
-      error('RAG rerank: missing required parameters');
-      log('RAG rerank validation failed - missing parameters');
-      return { success: false };
-    }
-    
-    log(`Reranking with query: "${query.substring(0, 50)}..."`);
-    log(`Making request to LangSearch API: ${CONFIG.LANGSEARCH.RERANK_URL}`);
-    
-    const requestPayload = {
-      query: query,  // Use the concise prompt/summary instead of full article
-      urls: urls,
-      maxK: 1
-    };
-    log(`Request payload: ${JSON.stringify(requestPayload)}`);
-    
-    const response = await fetch(CONFIG.LANGSEARCH.RERANK_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.LANGSEARCH_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestPayload)
-    });
-    
-    log(`LangSearch API response status: ${response.status}`);
-    log(`LangSearch API response statusText: ${response.statusText}`);
-    
-    const data = await response.json();
-    log(`LangSearch API response data keys: ${Object.keys(data).join(', ')}`);
-    
-    if (data?.rerankedPassage) {
-      log(`RAG rerank successful - reranked content length: ${data.rerankedPassage.length} characters`);
-      log('--- RAG RERANK FUNCTION SUCCESS ---');
-      return { success: true, reranked: data.rerankedPassage };
-    }
-    
-    error('RAG rerank failed: no rerankedPassage in response');
-    log(`Response data: ${JSON.stringify(data)}`);
-    log('--- RAG RERANK FUNCTION FAILED ---');
-    return { success: false };
-    
-  } catch (err) {
-    error(`LangSearch RAG rerank error: ${err.message}`);
-    error(`Error stack: ${err.stack}`);
-    log('--- RAG RERANK FUNCTION ERROR ---');
-    return { success: false };
-  }
-}
 
 // All other helpers below (unchanged except where noted):
 
@@ -544,7 +468,7 @@ async function generateArticleContent(prompt, title, sources, category, requestT
     log(`Selected model: ${modelName}`);
     log(`Max output tokens: ${maxTokens}`);
     
-    const systemPrompt = buildSystemPrompt(title, category, sources);
+    const systemPrompt = buildSystemPrompt(title, category, sources, style);
     log(`System prompt length: ${systemPrompt.length} characters`);
     
     const tools = [
