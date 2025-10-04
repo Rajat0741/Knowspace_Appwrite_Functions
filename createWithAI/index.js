@@ -12,9 +12,9 @@ const CONFIG = {
     ultra: 'gemini-2.5-pro'
   },
   MAX_OUTPUT_TOKENS: {
-    short: 30000,
+    concise: 30000,
     moderate: 45000,
-    long: 60000
+    extended: 60000
   },
   LANGSEARCH: {
     MAX_RESULTS: 20,
@@ -114,7 +114,7 @@ export default async ({ req, res, log, error }) => {
     
     if (!CONFIG.MAX_OUTPUT_TOKENS[style]) {
       error(`Invalid style validation failed: ${style}`);
-      return res.json({ success: false, error: 'Invalid style. Must be short, moderate, or long' }, 400, getCORSHeaders());
+      return res.json({ success: false, error: 'Invalid style. Must be concise, moderate, or extended' }, 400, getCORSHeaders());
     }
     
     log('✓ All request parameters validated successfully');
@@ -596,40 +596,214 @@ async function generateArticleContent(prompt, title, sources, category, requestT
 }
 
 // Build prompts
-function buildSystemPrompt(title, category, sources) {
+function buildSystemPrompt(title, category, sources, style) {
   console.log('--- BUILD SYSTEM PROMPT START ---');
   console.log(`Building system prompt for title: ${title}`);
   console.log(`Category: ${category}`);
+  console.log(`Style: ${style}`);
   console.log(`Sources count: ${sources ? sources.length : 0}`);
   
-  let prompt = `You are an expert content writer creating a comprehensive, engaging blog article.
+  // Define length-specific instructions with higher word counts
+  const lengthConfig = {
+    short: {
+      wordCount: '1800-2200 words',
+      sections: '4-5 major sections',
+      subsections: '2-3 subsections per section',
+      listItems: '4-5 items',
+      blockquotes: '2-3 blockquotes',
+      paragraphsPerSection: '3-4 paragraphs',
+      description: 'concise yet comprehensive'
+    },
+    moderate: {
+      wordCount: '2800-3200 words',
+      sections: '6-8 major sections',
+      subsections: '3-4 subsections per section',
+      listItems: '5-7 items',
+      blockquotes: '4-5 blockquotes',
+      paragraphsPerSection: '4-5 paragraphs',
+      description: 'thorough and well-balanced'
+    },
+    long: {
+      wordCount: '3800-4500+ words',
+      sections: '8-12 major sections',
+      subsections: '4-6 subsections per section',
+      listItems: '7-10+ items',
+      blockquotes: '6-8 blockquotes',
+      paragraphsPerSection: '5-7 paragraphs',
+      description: 'in-depth, exhaustive, and authoritative'
+    }
+  };
+  
+  const config = lengthConfig[style] || lengthConfig.moderate;
+  
+  let prompt = `You are an ELITE content creator with expertise in visual design and engaging writing. Your mission is to create a STUNNING, modern blog article that looks absolutely AMAZING in TinyMCE editor.
 
-ARTICLE DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 ARTICLE SPECIFICATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Title: "${title}"
 - Category: "${category}"
+- Style: ${style.toUpperCase()} - Create a ${config.description} article
 
-REQUIREMENTS:
-- Write a complete, well-structured article with proper HTML formatting for TinyMCE editor
-- Use semantic HTML tags: <h2>, <h3>, <p>, <ul>, <ol>, <li>, <strong>, <em>, <blockquote>
-- MUST include at least one <h2> or <p> tag (required for validation)
-- Create engaging, informative content with clear section headings
-- Include relevant examples, explanations, and insights
-- Write in a professional yet accessible tone
-- Ensure proper grammar, spelling, and punctuation
+📏 LENGTH & STRUCTURE REQUIREMENTS FOR ${style.toUpperCase()} STYLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 TARGET LENGTH: ${config.wordCount} (STRICTLY ADHERE TO THIS)
 
-OUTPUT FORMAT:
-- Return ONLY the HTML content (no markdown, no code blocks)
-- Start directly with content (no "Here's the article" or similar phrases)
-- Use proper HTML structure with meaningful semantic tags`;
+STRUCTURAL BREAKDOWN:
+- Major Sections: ${config.sections} with descriptive <h2> headings
+- Subsections: ${config.subsections} per major section using <h3> tags
+- Paragraphs: ${config.paragraphsPerSection} per section (3-5 sentences each)
+- Lists: ${config.listItems} per list with detailed explanations
+- Callouts: ${config.blockquotes} throughout with valuable insights
+- Each paragraph should be 60-100 words for depth
+
+CONTENT DENSITY:
+- Every section must be SUBSTANTIAL with real depth
+- No filler content - every sentence adds value
+- Include multiple examples, statistics, and actionable insights per section
+- Use transitional paragraphs between sections
+- Expand on concepts with detailed explanations
+
+🎯 CRITICAL INSTRUCTION: THINK DEEPLY BEFORE WRITING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Before generating ANY content, you MUST:
+1. Analyze the title and identify the core topics, questions, and user intent
+2. Consider what makes content in the "${category}" category truly engaging
+3. Plan a logical structure with compelling section titles that cover the topic comprehensively
+4. Think about concrete examples, analogies, case studies, and actionable insights to include
+5. Map out how to make each section visually distinct and scannable
+6. Ensure the content depth matches the ${style.toUpperCase()} style requirements (${config.wordCount})
+7. Plan to write ${config.paragraphsPerSection} per section to meet word count targets
+
+🎨 STYLING REQUIREMENTS (TINYMCE COMPATIBLE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+USE INLINE CSS STYLES FOR VISUAL IMPACT:
+
+✓ HEADINGS - Make them stand out:
+  <h2 style="color: #2c3e50; font-size: 28px; font-weight: 700; margin-top: 32px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 3px solid #3498db;">Section Title</h2>
+  
+  <h3 style="color: #34495e; font-size: 22px; font-weight: 600; margin-top: 24px; margin-bottom: 12px;">Subsection Title</h3>
+
+✓ PARAGRAPHS - Readable and spaced (WRITE LONGER PARAGRAPHS):
+  <p style="font-size: 16px; line-height: 1.8; color: #333; margin-bottom: 16px;">Your engaging content here with <strong style="color: #2c3e50; font-weight: 600;">important terms highlighted</strong> and <em style="font-style: italic; color: #555;">subtle emphasis</em> where needed. Each paragraph should be substantial, providing detailed explanations, examples, and insights that add real value to the reader.</p>
+
+✓ BLOCKQUOTES - Eye-catching callouts:
+  <blockquote style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px 24px; margin: 24px 0; border-left: 5px solid #ffd700; border-radius: 8px; font-size: 17px; line-height: 1.6; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+    <strong style="font-size: 18px; display: block; margin-bottom: 8px;">💡 Pro Tip:</strong>
+    Your valuable insight or key takeaway goes here. Make these blockquotes substantial with 2-3 sentences providing real depth.
+  </blockquote>
+  
+  <blockquote style="background-color: #f8f9fa; border-left: 4px solid #28a745; padding: 16px 20px; margin: 20px 0; border-radius: 4px; font-style: italic; color: #495057;">
+    "Powerful quote or important fact that deserves emphasis and provides genuine value to readers."
+  </blockquote>
+
+✓ LISTS - Scannable and structured (WRITE DETAILED LIST ITEMS):
+  <ul style="margin: 16px 0; padding-left: 24px; line-height: 1.8;">
+    <li style="margin-bottom: 12px; color: #333; font-size: 16px;"><strong style="color: #2c3e50;">Key Point One:</strong> Detailed explanation with context, examples, and practical applications that provide real value. Each list item should be 30-50 words.</li>
+    <li style="margin-bottom: 12px; color: #333; font-size: 16px;"><strong style="color: #2c3e50;">Key Point Two:</strong> More insights with practical applications, real-world scenarios, and actionable advice that readers can implement.</li>
+  </ul>
+  
+  <ol style="margin: 16px 0; padding-left: 24px; line-height: 1.8;">
+    <li style="margin-bottom: 12px; color: #333; font-size: 16px;"><strong>Step One:</strong> Clear, detailed instructions with explanations of why this step matters and how to execute it effectively.</li>
+  </ol>
+
+✓ HIGHLIGHT BOXES - Special emphasis:
+  <div style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 16px 20px; margin: 24px 0;">
+    <p style="margin: 0; color: #856404; font-size: 16px; line-height: 1.6;"><strong>⚠️ Important Note:</strong> Critical information that readers must know, explained in detail with context and implications.</p>
+  </div>
+  
+  <div style="background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 16px 20px; margin: 20px 0; border-radius: 4px;">
+    <p style="margin: 0; color: #0c5460; font-size: 16px;"><strong>ℹ️ Did You Know?</strong> Interesting fact or statistic with explanation and relevance to the topic.</p>
+  </div>
+
+✓ SPACING - Create visual breathing room:
+  • Use margin-bottom: 16-24px between paragraphs
+  • Use margin-top: 32-40px before major h2 sections
+  • Add margin: 24px 0 around blockquotes and special elements
+
+📐 DETAILED STRUCTURE REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Opening Section (150-200 words):
+  • Compelling hook that grabs attention
+  • Context and relevance to the reader
+  • Preview of what the article covers
+
+✓ Each Major Section (${config.paragraphsPerSection} per section):
+  • Opening paragraph introducing the section topic
+  • ${config.subsections} with detailed explanations
+  • Mix of paragraphs, lists, and blockquotes
+  • Real examples, case studies, or scenarios
+  • Smooth transitions to next section
+
+✓ Conclusion Section (150-200 words):
+  • Summary of key points
+  • Actionable takeaways
+  • Call-to-action or next steps
+
+🎭 CONTENT DEPTH & QUALITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Every section must provide REAL VALUE - no fluff or filler
+✓ Include specific examples, case studies, or real-world scenarios
+✓ Use concrete numbers, data points, or statistics when relevant
+✓ Make it actionable - readers should know what to DO with the information
+✓ Vary sentence length and structure for engaging rhythm
+✓ Use active voice and conversational yet professional tone
+✓ Match energy level to the "${category}" category
+✓ Provide detailed explanations, not surface-level information
+✓ Each paragraph should advance the reader's understanding significantly
+
+🚫 CRITICAL PROHIBITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+✗ NEVER mention or reference source URLs in the article content
+✗ NEVER include phrases like "According to [source]" or "Source: [URL]"
+✗ NO markdown formatting (no ##, **, or markdown code blocks)
+✗ NO code block wrappers around the HTML
+✗ NO introductory phrases like "Here's the article" or "Below is..."
+✗ NO generic, fluffy content - every sentence must add value
+✗ NO short, superficial paragraphs - write substantial content
+✗ DO NOT skimp on word count - meet the ${config.wordCount} target
+
+📏 OUTPUT FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━
+✓ Return ONLY clean HTML with inline CSS styles
+✓ Start immediately with your first <h2> or compelling intro paragraph
+✓ Ensure ALL tags are properly closed
+✓ Include at least one <h2> AND multiple <p> tags (required for validation)
+✓ Every element should have inline styles for visual appeal
+✓ WRITE LONG, DETAILED CONTENT - aim for ${config.wordCount}`;
 
   if (sources && sources.length > 0) {
     console.log(`Adding sources section to prompt: ${JSON.stringify(sources)}`);
-    prompt += `\n\nREFERENCE SOURCES:
-These sources have been provided for context and factual grounding. Use them to ensure accuracy:
+    prompt += `\n\n📚 REFERENCE SOURCES (FOR FACTUAL ACCURACY ONLY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The following sources have been provided for factual verification and accuracy:
+
 ${sources.map((url, i) => `${i + 1}. ${url}`).join('\n')}
 
-Note: Verify facts against these sources but write in your own words. Do not copy content directly.`;
+🔍 SOURCE USAGE GUIDELINES:
+- Use these sources to verify facts, statistics, and technical accuracy
+- Extract key insights and synthesize information in your own words
+- Add depth and credibility by incorporating facts from these sources
+- NEVER mention these URLs in your article content
+- NEVER write phrases like "according to this source" or "as stated in..."
+- Treat the sources as background research - invisible to readers
+- If using statistics or data from sources, present them naturally without attribution`;
   }
+
+  prompt += `\n\n🎯 FINAL REMINDER FOR ${style.toUpperCase()} ARTICLE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You are creating a ${style.toUpperCase()} article with a target of ${config.wordCount}.
+
+MANDATORY REQUIREMENTS:
+- ${config.sections} with ${config.subsections} each
+- ${config.paragraphsPerSection} per major section
+- Each paragraph: 60-100 words with detailed explanations
+- Lists with ${config.listItems}, each 30-50 words
+- ${config.blockquotes} throughout the article
+- NO SHORTCUTS - write comprehensive, detailed content
+
+Write ${config.description} coverage that truly educates and engages readers.
+Take a deep breath, plan your structure, and create an AMAZING, LENGTHY article! 🚀`;
 
   console.log(`System prompt length: ${prompt.length} characters`);
   console.log('--- BUILD SYSTEM PROMPT END ---');
