@@ -808,14 +808,14 @@ Think step-by-step through each section:
 }
 .article-h3 { 
   font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.75rem 0; line-height: 1.3; 
-  color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;
+  color: #000000; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;
 }
 .article-p { 
-  font-size: 1rem; line-height: 1.7; margin: 1rem 0; color: #4b5563; 
+  font-size: 1rem; line-height: 1.7; margin: 1rem 0; color: #000000; 
   text-align: justify; letter-spacing: 0.025em;
 }
-.article-strong { font-weight: 600; color: #1f2937; }
-.article-em { font-style: italic; color: #6b7280; }
+.article-strong { font-weight: 600; color: #000000; }
+.article-em { font-style: italic; color: #000000; }
 
 /* Enhanced Lists */
 .article-ul, .article-ol { 
@@ -823,7 +823,7 @@ Think step-by-step through each section:
   background: rgba(59, 130, 246, 0.02); border-radius: 0.5rem; padding: 1rem 1rem 1rem 2rem;
 }
 .article-li { 
-  margin: 0.75rem 0; line-height: 1.6; color: #374151; 
+  margin: 0.75rem 0; line-height: 1.6; color: #000000; 
   position: relative; transition: all 0.2s ease;
 }
 .article-li:hover { transform: translateX(4px); }
@@ -840,7 +840,7 @@ Think step-by-step through each section:
 }
 .article-table td { 
   padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb; 
-  color: #374151; vertical-align: top;
+  color: #000000; vertical-align: top;
 }
 .article-table tr:hover td { background: rgba(59, 130, 246, 0.05); }
 
@@ -848,7 +848,7 @@ Think step-by-step through each section:
 .blockquote-gradient { 
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
   border-left: 4px solid #3b82f6; padding: 1.5rem; margin: 2rem 0; border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); position: relative; overflow: hidden;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); position: relative; overflow: hidden; color: #000000;
 }
 .blockquote-gradient::before {
   content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
@@ -857,36 +857,36 @@ Think step-by-step through each section:
 .blockquote-simple { 
   border-left: 4px solid #6b7280; padding: 1.5rem; margin: 2rem 0; font-style: italic;
   background: linear-gradient(135deg, rgba(107, 114, 128, 0.05), rgba(107, 114, 128, 0.02));
-  border-radius: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border-radius: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: #000000;
 }
 .blockquote-quote { 
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
   border-left: 4px solid #22c55e; padding: 1.5rem; margin: 2rem 0; border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15); position: relative;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15); position: relative; color: #000000;
 }
 
 /* Enhanced Highlight Boxes */
-.highlight-warning { 
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
-  border: 2px solid rgba(245, 158, 11, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-  animation: pulse-warning 3s infinite;
+.highlight-warning {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.15), rgba(251, 146, 60, 0.05));
+  border: 2px solid rgba(251, 146, 60, 0.5); padding: 1.5rem; margin: 2rem 0;
+  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(251, 146, 60, 0.25);
+  animation: pulse-warning 3s infinite; color: #000000;
 }
-.highlight-info { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
-  border: 2px solid rgba(59, 130, 246, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+.highlight-info {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(14, 165, 233, 0.05));
+  border: 2px solid rgba(14, 165, 233, 0.5); padding: 1.5rem; margin: 2rem 0;
+  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25); color: #000000;
 }
-.highlight-success { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
-  border: 2px solid rgba(34, 197, 94, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+.highlight-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+  border: 2px solid rgba(16, 185, 129, 0.5); padding: 1.5rem; margin: 2rem 0;
+  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); color: #000000;
 }
-.highlight-danger { 
+.highlight-danger {
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
-  border: 2px solid rgba(239, 68, 68, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-  animation: pulse-danger 4s infinite;
+  border: 2px solid rgba(239, 68, 68, 0.5); padding: 1.5rem; margin: 2rem 0;
+  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+  animation: pulse-danger 4s infinite; color: #000000;
 }
 
 /* Animations */
@@ -964,16 +964,16 @@ Think step-by-step through each section:
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25) !important;
 }
 .dark .highlight-warning { 
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.1)) !important;
-  border-color: rgba(245, 158, 11, 0.6) !important; box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3) !important;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.25), rgba(251, 146, 60, 0.1)) !important;
+  border-color: rgba(251, 146, 60, 0.6) !important; box-shadow: 0 4px 16px rgba(251, 146, 60, 0.3) !important;
 }
 .dark .highlight-info { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.1)) !important;
-  border-color: rgba(59, 130, 246, 0.6) !important; box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3) !important;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(14, 165, 233, 0.1)) !important;
+  border-color: rgba(14, 165, 233, 0.6) !important; box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3) !important;
 }
 .dark .highlight-success { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.1)) !important;
-  border-color: rgba(34, 197, 94, 0.6) !important; box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3) !important;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.1)) !important;
+  border-color: rgba(16, 185, 129, 0.6) !important; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3) !important;
 }
 .dark .highlight-danger { 
   background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1)) !important;
