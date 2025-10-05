@@ -807,12 +807,12 @@ Think step-by-step through each section:
   text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 .article-h3 { 
-  font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.75rem 0; line-height: 1.3; 
-  color: #000000; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;
+  font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 0.75rem 0; line-height: 1.3; 
+  color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;
 }
 .article-p { 
-  font-size: 1rem; line-height: 1.7; margin: 1rem 0; color: #000000; 
-  text-align: justify; letter-spacing: 0.025em;
+  font-size: 1rem; line-height: 1.7; margin: 1rem 0; color: #111827; 
+  text-align: justify; letter-spacing: 0.025em; font-weight: 500;
 }
 .article-strong { font-weight: 600; color: #000000; }
 .article-em { font-style: italic; color: #000000; }
@@ -856,8 +856,7 @@ Think step-by-step through each section:
 }
 .blockquote-simple { 
   border-left: 4px solid #6b7280; padding: 1.5rem; margin: 2rem 0; font-style: italic;
-  background: linear-gradient(135deg, rgba(107, 114, 128, 0.05), rgba(107, 114, 128, 0.02));
-  border-radius: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: #000000;
+  border-radius: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: #111827;
 }
 .blockquote-quote { 
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
