@@ -529,7 +529,7 @@ function buildSystemPrompt(title, category, sources, style) {
       sections: 5,
       subsectionsPerSection: 3,
       paragraphsPerSection: 4,
-      wordsPerParagraph: '80-120',
+      wordsPerParagraph: '60-100',
       listItems: 5,
       wordsPerListItem: '30-50',
       blockquotes: 3,
@@ -542,7 +542,7 @@ function buildSystemPrompt(title, category, sources, style) {
       sections: 7,
       subsectionsPerSection: 4,
       paragraphsPerSection: 5,
-      wordsPerParagraph: '90-130',
+      wordsPerParagraph: '70-110',
       listItems: 7,
       wordsPerListItem: '35-55',
       blockquotes: 5,
@@ -555,7 +555,7 @@ function buildSystemPrompt(title, category, sources, style) {
       sections: 10,
       subsectionsPerSection: 5,
       paragraphsPerSection: 7,
-      wordsPerParagraph: '100-140',
+      wordsPerParagraph: '80-120',
       listItems: 9,
       wordsPerListItem: '40-60',
       blockquotes: 7,
@@ -588,7 +588,11 @@ STRUCTURAL REQUIREMENTS:
 → Words per List Item: ${config.wordsPerListItem} words with detailed explanations
 → Blockquotes/Callouts: ${config.blockquotes} throughout the article
 → Introduction: 150-250 words (compelling hook + preview)
-→ Conclusion: 200-250 words (summary + actionable takeaways)
+→ Conclusion: 150-250 words (summary + actionable takeaways)
+
+CALCULATION CHECK:
+- ${config.sections} sections × ${config.paragraphsPerSection} paragraphs × ${config.wordsPerParagraph.split('-')[0]} words = ${config.sections * config.paragraphsPerSection * parseInt(config.wordsPerParagraph.split('-')[0])} words minimum from paragraphs alone
+- Plus lists, blockquotes, intro, conclusion = Target ${config.wordCount} words
 
 YOU MUST WRITE LONG, DETAILED CONTENT. Every section must be substantial.
 
@@ -611,241 +615,149 @@ General Styling Instructions:
 - Use headings, paragraphs, lists, blockquotes, and highlight boxes with appropriate classes.
 - Prioritize clarity, legibility, and a professional appearance.
 
-# COMPREHENSIVE CSS STYLING WITH DARK MODE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<style>
-/* Base Typography */
-.article-h2 { 
-  font-size: 1.875rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2; 
-  color: #1f2937; background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-.article-h3 { 
-  font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.75rem 0; line-height: 1.3; 
-  color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;
-}
-.article-p { 
-  font-size: 1rem; line-height: 1.7; margin: 1rem 0; color: #4b5563; 
-  text-align: justify; letter-spacing: 0.025em;
-}
-.article-strong { font-weight: 600; color: #1f2937; }
-.article-em { font-style: italic; color: #6b7280; }
-
-/* Enhanced Lists */
-.article-ul, .article-ol { 
-  margin: 1.5rem 0; padding-left: 2rem; 
-  background: rgba(59, 130, 246, 0.02); border-radius: 0.5rem; padding: 1rem 1rem 1rem 2rem;
-}
-.article-li { 
-  margin: 0.75rem 0; line-height: 1.6; color: #374151; 
-  position: relative; transition: all 0.2s ease;
-}
-.article-li:hover { transform: translateX(4px); }
-
-/* Advanced Blockquotes with Gradients */
-.blockquote-gradient { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
-  border-left: 4px solid #3b82f6; padding: 1.5rem; margin: 2rem 0; border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); position: relative; overflow: hidden;
-}
-.blockquote-gradient::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
-}
-.blockquote-simple { 
-  border-left: 4px solid #6b7280; padding: 1.5rem; margin: 2rem 0; font-style: italic;
-  background: linear-gradient(135deg, rgba(107, 114, 128, 0.05), rgba(107, 114, 128, 0.02));
-  border-radius: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-.blockquote-quote { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
-  border-left: 4px solid #22c55e; padding: 1.5rem; margin: 2rem 0; border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15); position: relative;
-}
-
-/* Enhanced Highlight Boxes */
-.highlight-warning { 
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
-  border: 2px solid rgba(245, 158, 11, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-  animation: pulse-warning 3s infinite;
-}
-.highlight-info { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
-  border: 2px solid rgba(59, 130, 246, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-}
-.highlight-success { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
-  border: 2px solid rgba(34, 197, 94, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
-}
-.highlight-danger { 
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
-  border: 2px solid rgba(239, 68, 68, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-  animation: pulse-danger 4s infinite;
-}
-
-/* Animations */
-@keyframes pulse-warning { 0%, 100% { box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); } 50% { box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3); } }
-@keyframes pulse-danger { 0%, 100% { box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); } 50% { box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3); } }
-
-/* DARK MODE MEDIA QUERIES */
-@media (prefers-color-scheme: dark) {
-  .article-h2 { color: #f9fafb; text-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); }
-  .article-h3 { color: #e5e7eb; border-bottom-color: #374151; }
-  .article-p { color: #d1d5db; }
-  .article-strong { color: #f9fafb; }
-  .article-em { color: #9ca3af; }
-  .article-ul, .article-ol { background: rgba(59, 130, 246, 0.08); }
-  .article-li { color: #e5e7eb; }
-  
-  .blockquote-gradient { 
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-  }
-  .blockquote-simple { 
-    background: linear-gradient(135deg, rgba(107, 114, 128, 0.15), rgba(107, 114, 128, 0.08));
-    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-  }
-  .blockquote-quote { 
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
-  }
-  
-  .highlight-warning { 
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.1));
-    border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
-  }
-  .highlight-info { 
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.1));
-    border-color: rgba(59, 130, 246, 0.6); box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-  }
-  .highlight-success { 
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.1));
-    border-color: rgba(34, 197, 94, 0.6); box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
-  }
-  .highlight-danger { 
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
-    border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
-  }
-}
-
-/* EXPLICIT DARK MODE CLASS */
-.dark .article-h2 { color: #f9fafb; text-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); }
-.dark .article-h3 { color: #e5e7eb; border-bottom-color: #374151; }
-.dark .article-p { color: #d1d5db; }
-.dark .article-strong { color: #f9fafb; }
-.dark .article-em { color: #9ca3af; }
-.dark .article-ul, .dark .article-ol { background: rgba(59, 130, 246, 0.08); }
-.dark .article-li { color: #e5e7eb; }
-.dark .blockquote-gradient { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-}
-.dark .blockquote-simple { 
-  background: linear-gradient(135deg, rgba(107, 114, 128, 0.15), rgba(107, 114, 128, 0.08));
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-}
-.dark .blockquote-quote { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
-}
-.dark .highlight-warning { 
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.1));
-  border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
-}
-.dark .highlight-info { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.1));
-  border-color: rgba(59, 130, 246, 0.6); box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-}
-.dark .highlight-success { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.1));
-  border-color: rgba(34, 197, 94, 0.6); box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
-}
-.dark .highlight-danger { 
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
-  border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
-}
-</style>
-
-# ESSENTIAL HTML STRUCTURE EXAMPLES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# ESSENTIAL HTML STRUCTURE EXAMPLES
+# HTML STRUCTURE & USAGE EXAMPLES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 INTRODUCTION (150-250 words):
-<p class="article-p">Start with compelling hook addressing reader's pain point. Provide context with data/research. Promise specific value and outcomes they'll achieve.</p>
+<p class="article-p">Start with a compelling hook that grabs attention. Explain why this topic matters to readers. Preview what they'll learn. Make this substantial - ${config.wordsPerParagraph} words with depth, context, and value.</p>
 
-SECTION STRUCTURE:
-<h2 class="article-h2">Section Title</h2>
-<p class="article-p">Opening paragraph with ${config.wordsPerParagraph} words, concrete details, examples, actionable insights.</p>
+MAJOR SECTION:
+<h2 class="article-h2">Compelling Section Title That Describes Content</h2>
+<p class="article-p">Opening paragraph introducing this section's focus. Write ${config.wordsPerParagraph} words with specific details, examples, and insights. Every sentence should add value and advance understanding.</p>
 
-<h3 class="article-h3">Subsection Title</h3>
-<p class="article-p">Detailed explanation with ${config.wordsPerParagraph} words, statistics, case studies, practical applications.</p>
+SUBSECTION:
+<h3 class="article-h3">Specific Subtopic Within Main Section</h3>
+<p class="article-p">Detailed explanation with concrete examples, data points, or case studies. Make this ${config.wordsPerParagraph} words with real substance. Include practical applications and actionable insights.</p>
 
-BLOCKQUOTE TYPES:
+<p class="article-p">Continue with additional paragraphs that explore different aspects. Use <strong class="article-strong">key terminology</strong> and <em class="article-em">subtle emphasis</em> where appropriate. Each paragraph should be comprehensive.</p>
+
+BLOCKQUOTES - Use ${config.blockquotes} throughout article:
 <blockquote class="blockquote-gradient">
-  <strong>💡 Expert Insight:</strong> Professional advice, insider knowledge, industry secrets with specific actionable details.
+  <strong>💡 Pro Tip:</strong>
+  Share valuable insider knowledge or best practices. Write 2-3 substantial sentences that provide genuine value readers can't easily find elsewhere. Be specific and actionable.
 </blockquote>
 
 <blockquote class="blockquote-simple">
-  "Authoritative quote from industry leaders or research that reinforces key message and adds credibility."
+  "Powerful, memorable quote that reinforces your key message and provides authority or credibility to your argument."
 </blockquote>
 
 <blockquote class="blockquote-quote">
-  <strong>📊 Key Data:</strong> Important statistics with context about significance and application.
+  Important statistic or research finding that supports your points with concrete data.
 </blockquote>
 
-LIST PATTERNS:
+LISTS - Use ${config.listItems} items, ${config.wordsPerListItem} words each:
 <ul class="article-ul">
-  <li class="article-li"><strong>Point Title:</strong> ${config.wordsPerListItem} words with context, examples, implementation steps, expected outcomes.</li>
+  <li class="article-li"><strong>First Key Point Title:</strong> Comprehensive explanation that includes context, practical examples, specific steps, or real-world applications. Write ${config.wordsPerListItem} words minimum with genuine depth and actionable details that readers can implement.</li>
+  <li class="article-li"><strong>Second Key Point Title:</strong> Another detailed explanation with examples, data, case studies, or step-by-step guidance. Provide real value with specific, concrete information.</li>
+  <li class="article-li"><strong>Third Key Point Title:</strong> Continue pattern with substantial, valuable content in every list item.</li>
 </ul>
 
+NUMBERED LISTS (for processes, steps, rankings):
 <ol class="article-ol">
-  <li class="article-li"><strong>Step Title:</strong> Detailed instructions, tools needed, troubleshooting tips, success metrics.</li>
+  <li class="article-li"><strong>Step One - Action Title:</strong> Detailed instructions explaining what to do, why it matters, and how to execute effectively. Include tips, common mistakes to avoid, and expected outcomes.</li>
+  <li class="article-li"><strong>Step Two - Next Action:</strong> Continue with clear, comprehensive guidance.</li>
 </ol>
 
-HIGHLIGHT BOXES:
+HIGHLIGHT BOXES - Use strategically:
 <div class="highlight-warning">
-  <p><strong>⚠️ Warning:</strong> Specific risks, common errors, costly mistakes to avoid with alternatives.</p>
+  <p><strong>⚠️ Important Warning:</strong> Critical information readers must know to avoid mistakes, problems, or missed opportunities. Explain the implications and what to do instead.</p>
 </div>
 
 <div class="highlight-info">
-  <p><strong>ℹ️ Key Info:</strong> Important facts, insider knowledge, competitive advantages.</p>
+  <p><strong>ℹ️ Did You Know?</strong> Fascinating fact, statistic, or insight that adds depth and interest. Explain why this matters and how readers can use this information.</p>
 </div>
 
 <div class="highlight-success">
-  <p><strong>✅ Best Practice:</strong> Proven strategies with implementation details and success criteria.</p>
+  <p><strong>✅ Best Practice:</strong> Proven strategy or recommendation backed by experience or data. Explain implementation details.</p>
 </div>
 
 <div class="highlight-danger">
-  <p><strong>🚫 Avoid:</strong> Common pitfalls with specific consequences and better approaches.</p>
+  <p><strong>🚫 Avoid This:</strong> Common mistake or pitfall with explanation of why it's problematic and what to do instead.</p>
 </div>
 
-CONCLUSION:
-<h2 class="article-h2">Key Takeaways and Next Steps</h2>
-<p class="article-p">Synthesize 3-5 core principles. Provide immediate next steps for 24-48 hours. Include beginner and advanced options.</p>
-<h2 class="article-h2">Strategic Content Flow for Maximum Engagement</h2>
+CONCLUSION (150-250 words):
+<h2 class="article-h2">Conclusion: Key Takeaways and Next Steps</h2>
+<p class="article-p">Summarize the most important points from the article. Reinforce the main message and value provided. Give readers clear, actionable next steps they can take immediately.</p>
+
+# CONTENT QUALITY STANDARDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DEPTH & SUBSTANCE:
+✓ Every paragraph must provide genuine value - NO filler content
+✓ Include specific examples, case studies, or real-world scenarios in each section
+✓ Use concrete numbers, statistics, data points, or research findings
+✓ Provide actionable advice - readers should know exactly what to DO
+✓ Explain the "why" behind concepts, not just the "what"
+✓ Address common questions, concerns, or objections readers might have
+
+WRITING QUALITY:
+✓ Vary sentence length and structure for engaging rhythm
+✓ Use active voice predominantly (passive voice sparingly)
+✓ Professional yet conversational tone - write like a knowledgeable friend
+✓ Match energy and style to "${category}" category expectations
+✓ Use transitions between sections for smooth flow
+✓ Balance technical accuracy with accessibility
+
+ENGAGEMENT ELEMENTS:
+✓ Start sections with hooks that create curiosity
+✓ Use rhetorical questions occasionally to engage readers
+✓ Include surprising facts or counterintuitive insights
+✓ Provide contrasts and comparisons to aid understanding
+✓ Use analogies or metaphors for complex concepts
+✓ Add personality while maintaining professionalism
+
+PARAGRAPH CONSTRUCTION:
+✓ Each paragraph: ${config.wordsPerParagraph} words (STRICTLY ENFORCE)
+✓ Topic sentence that introduces the main idea
+✓ 3-6 supporting sentences with details, examples, evidence
+✓ Concluding or transitional sentence
+✓ NO single-sentence paragraphs
+✓ NO shallow or superficial content
+
 # STRICT PROHIBITIONS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✗ NEVER mention source URLs in article content
+✗ NEVER write "according to [source]" or "based on [URL]"
 ✗ NEVER use inline styles (style="...") - ONLY CSS classes
 ✗ NEVER use markdown syntax (##, **, __, etc.)
 ✗ NEVER wrap output in code fences (\`\`\`html)
-✗ NEVER include preamble text before content
+✗ NEVER include preamble text before the <style> tag
 ✗ NEVER write short paragraphs under ${config.wordsPerParagraph.split('-')[0]} words
 ✗ NEVER use generic, fluffy content without substance
+✗ NEVER skip sections or subsections to save space
 ✗ NEVER fall short of ${config.wordMin} word minimum
 
-# FINAL EXECUTION CHECKLIST
-BEGIN WRITING NOW with deep, comprehensive, valuable content.
-TARGET: ${config.wordCount} WORDS with ${config.sections} sections.
-START with article-p introduction, END with article-h2 conclusion.`;
+# PRE-WRITING ANALYSIS (THINK BEFORE GENERATING)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Before you begin writing, mentally complete this planning:
+
+1. TOPIC ANALYSIS:
+   - What are the 3-5 core questions readers have about "${title}"?
+   - What misconceptions exist around this topic?
+   - What makes content in "${category}" engaging and valuable?
+
+2. STRUCTURE PLANNING:
+   - Map out ${config.sections} section titles that comprehensively cover the topic
+   - For each section, identify ${config.subsectionsPerSection} logical subsections
+   - Plan specific examples, data, or case studies for each section
+
+3. CONTENT DEPTH:
+   - Identify 10+ concrete examples or scenarios to include
+   - List 5+ statistics, data points, or research findings to incorporate
+   - Plan 3-5 actionable takeaways readers can implement
+   - Consider common objections or questions to address
+
+4. WORD COUNT CALCULATION:
+   - ${config.sections} sections × ${config.paragraphsPerSection} paragraphs × ${parseInt(config.wordsPerParagraph.split('-')[1])} words = ${config.sections * config.paragraphsPerSection * parseInt(config.wordsPerParagraph.split('-')[1])} words from paragraphs
+   - ${config.blockquotes} blockquotes × 40 words average = ${config.blockquotes * 40} words
+   - ${config.sections} lists × ${config.listItems} items × ${parseInt(config.wordsPerListItem.split('-')[1])} words = ${config.sections * config.listItems * parseInt(config.wordsPerListItem.split('-')[1])} words
+   - Introduction (200 words) + Conclusion (200 words) = 400 words
+   - TOTAL TARGET: ${config.wordCount} words
+
+5. VISUAL VARIETY:
+   - Plan placement of ${config.blockquotes} blockquotes throughout
+   - Determine which sections need lists vs continuous prose
+   - Identify where highlight boxes add value`;
 
   if (sources && sources.length > 0) {
     prompt += `\n\n# REFERENCE SOURCES (FOR FACTUAL ACCURACY ONLY)
