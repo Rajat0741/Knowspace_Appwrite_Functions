@@ -307,10 +307,15 @@ async function createTrackingDocument(userId, title, prompt, category, requestTy
       request_type: requestType, 
       style, 
       status: CONFIG.STATUS.IN_PROGRESS,
-      sources: sources.length > 0 ? sources.join(',') : '',
       postId: null,
       error: ''
     };
+
+    // Only include sources if they exist and are not empty
+    if (sources && sources.length > 0) {
+      // Store sources as an array instead of comma-separated string
+      trackingData.sources = sources;
+    }
     
     log(`Tracking data prepared: ${JSON.stringify(trackingData)}`);
     log(`Database ID: ${CONFIG.DATABASE_ID}`);
@@ -471,8 +476,11 @@ async function generateArticleContent(prompt, title, sources, category, requestT
     const systemPrompt = buildSystemPrompt(title, category, sources, style);
     log(`System prompt length: ${systemPrompt.length} characters`);
     
+    // Configure grounding tools - Google Search for dynamic real-time information
     const tools = [
-      { googleSearch: {} }
+      { 
+        googleSearch: {} // Enable Google Search grounding for up-to-date information
+      }
     ];
     log(`Tools configured: ${JSON.stringify(tools)}`);
     
@@ -498,6 +506,14 @@ async function generateArticleContent(prompt, title, sources, category, requestT
     log('Gemini AI response received');
     log(`Response object keys: ${Object.keys(response).join(', ')}`);
     
+    // Check for grounding metadata to see if Google Search was used
+    if (response.candidates && response.candidates[0] && response.candidates[0].groundingMetadata) {
+      log('✓ Response was grounded with Google Search');
+      log(`Grounding metadata: ${JSON.stringify(response.candidates[0].groundingMetadata)}`);
+    } else {
+      log('ℹ Model answered from its own knowledge (no grounding used)');
+    }
+    
     const generatedText = response.text;
     log(`Generated text length: ${generatedText ? generatedText.length : 0} characters`);
     
@@ -522,355 +538,64 @@ async function generateArticleContent(prompt, title, sources, category, requestT
 // Build prompts
 function buildSystemPrompt(title, category, sources, style) {
   const lengthConfig = {
-    short: {
-      wordCount: '1800-2200',
-      wordMin: 1800,
-      wordMax: 2200,
-      sections: 5,
-      subsectionsPerSection: 3,
-      paragraphsPerSection: 4,
-      wordsPerParagraph: '80-120',
-      listItems: 5,
-      wordsPerListItem: '30-50',
-      blockquotes: 3,
-      description: 'concise yet comprehensive'
-    },
-    moderate: {
-      wordCount: '2800-3200',
-      wordMin: 2800,
-      wordMax: 3200,
-      sections: 7,
-      subsectionsPerSection: 4,
-      paragraphsPerSection: 5,
-      wordsPerParagraph: '90-130',
-      listItems: 7,
-      wordsPerListItem: '35-55',
-      blockquotes: 5,
-      description: 'thorough and well-balanced'
-    },
-    long: {
-      wordCount: '3800-4500',
-      wordMin: 3800,
-      wordMax: 4500,
-      sections: 10,
-      subsectionsPerSection: 5,
-      paragraphsPerSection: 7,
-      wordsPerParagraph: '100-140',
-      listItems: 9,
-      wordsPerListItem: '40-60',
-      blockquotes: 7,
-      description: 'in-depth, exhaustive, and authoritative'
-    }
+    short: { wordCount: '1800-2200', wordMin: 1800, wordMax: 2200, sections: 5, subsectionsPerSection: 3, paragraphsPerSection: 4, wordsPerParagraph: '80-120', listItems: 5, wordsPerListItem: '30-50', blockquotes: 3 },
+    moderate: { wordCount: '2800-3200', wordMin: 2800, wordMax: 3200, sections: 7, subsectionsPerSection: 4, paragraphsPerSection: 5, wordsPerParagraph: '90-130', listItems: 7, wordsPerListItem: '35-55', blockquotes: 5 },
+    long: { wordCount: '3800-4500', wordMin: 3800, wordMax: 4500, sections: 10, subsectionsPerSection: 5, paragraphsPerSection: 7, wordsPerParagraph: '100-140', listItems: 9, wordsPerListItem: '40-60', blockquotes: 7 }
   };
   
   const config = lengthConfig[style] || lengthConfig.moderate;
   
-  let prompt = `# PRIMARY MISSION
-You are a world-class content creator specializing in "${category}" content. Create an exceptional, comprehensive article that is visually stunning, deeply informative, and optimized for both light and dark modes.
+  let prompt = `# CONTENT CREATION MISSION
+Create an exceptional ${style} article about "${title}" in ${category} category.
 
-# ARTICLE PARAMETERS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Title: "${title}"
-Category: ${category}
-Style: ${style.toUpperCase()}
-Target Word Count: ${config.wordCount} words (MINIMUM ${config.wordMin}, MAXIMUM ${config.wordMax})
+# CORE RULES
+🚫 NEVER copy-paste content - synthesize and transform all information into original insights
+🚫 NEVER reproduce exact text from any source - create unique explanations
+✅ ALWAYS research using grounding tools for accurate, up-to-date information
+✅ ALWAYS explain practical implications and applications
+✅ ALWAYS provide specific, actionable content
 
-# CRITICAL LENGTH REQUIREMENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-THIS IS A ${style.toUpperCase()} ARTICLE - YOU MUST WRITE ${config.wordCount} WORDS
-
-STRUCTURAL REQUIREMENTS:
-→ Total Sections: ${config.sections} major sections (each with <h2 class="article-h2">)
-→ Subsections: ${config.subsectionsPerSection} subsections per major section (each with <h3 class="article-h3">)
-→ Paragraphs per Section: ${config.paragraphsPerSection} substantial paragraphs
-→ Words per Paragraph: ${config.wordsPerParagraph} words (NO SHORT PARAGRAPHS)
-→ List Items: ${config.listItems} items per list
-→ Words per List Item: ${config.wordsPerListItem} words with detailed explanations
-→ Blockquotes/Callouts: ${config.blockquotes} throughout the article
-→ Introduction: 150-250 words (compelling hook + preview)
-→ Conclusion: 200-250 words (summary + actionable takeaways)
-
-YOU MUST WRITE LONG, DETAILED CONTENT. Every section must be substantial.
-
-# OUTPUT FORMAT (MANDATORY)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. Generate Only tinymce compatible Content (most important)
-2. Follow immediately with HTML content using CSS classes ONLY
-3. NO inline styles anywhere (they break dark mode)
-4. NO markdown syntax (##, **, [], etc.)
-5. NO code fences or wrappers (\`\`\`html, etc.)
-6. NO preamble text ("Here's the article...", "Below is...", etc.)
-
-
-Use semantic HTML and apply appropriate CSS classes.
-
-General Styling Instructions:
-- Ensure good readability and contrast for both light and dark modes.
-- Use only CSS classes, never inline styles.
-- Make content visually clear, well-spaced, and accessible.
-- Use headings, paragraphs, lists, blockquotes, and highlight boxes with appropriate classes.
-- Prioritize clarity, legibility, and a professional appearance.
-
-# COMPREHENSIVE CSS STYLING WITH DARK MODE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ARTICLE SPECS
+Target: ${config.wordCount} words (MIN: ${config.wordMin})
+Structure: ${config.sections} sections, ${config.subsectionsPerSection} subsections each
+Paragraphs: ${config.wordsPerParagraph} words each (substantial content only)
 
 <style>
-/* Base Typography */
-.article-h2 { 
-  font-size: 1.875rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2; 
-  color: #1f2937; background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-.article-h3 { 
-  font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.75rem 0; line-height: 1.3; 
-  color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;
-}
-.article-p { 
-  font-size: 1rem; line-height: 1.7; margin: 1rem 0; color: #4b5563; 
-  text-align: justify; letter-spacing: 0.025em;
-}
-.article-strong { font-weight: 600; color: #1f2937; }
-.article-em { font-style: italic; color: #6b7280; }
-
-/* Enhanced Lists */
-.article-ul, .article-ol { 
-  margin: 1.5rem 0; padding-left: 2rem; 
-  background: rgba(59, 130, 246, 0.02); border-radius: 0.5rem; padding: 1rem 1rem 1rem 2rem;
-}
-.article-li { 
-  margin: 0.75rem 0; line-height: 1.6; color: #374151; 
-  position: relative; transition: all 0.2s ease;
-}
-.article-li:hover { transform: translateX(4px); }
-
-/* Advanced Blockquotes with Gradients */
-.blockquote-gradient { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
-  border-left: 4px solid #3b82f6; padding: 1.5rem; margin: 2rem 0; border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); position: relative; overflow: hidden;
-}
-.blockquote-gradient::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
-}
-.blockquote-simple { 
-  border-left: 4px solid #6b7280; padding: 1.5rem; margin: 2rem 0; font-style: italic;
-  background: linear-gradient(135deg, rgba(107, 114, 128, 0.05), rgba(107, 114, 128, 0.02));
-  border-radius: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-.blockquote-quote { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
-  border-left: 4px solid #22c55e; padding: 1.5rem; margin: 2rem 0; border-radius: 0.75rem;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15); position: relative;
-}
-
-/* Enhanced Highlight Boxes */
-.highlight-warning { 
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
-  border: 2px solid rgba(245, 158, 11, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-  animation: pulse-warning 3s infinite;
-}
-.highlight-info { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
-  border: 2px solid rgba(59, 130, 246, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
-}
-.highlight-success { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
-  border: 2px solid rgba(34, 197, 94, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
-}
-.highlight-danger { 
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
-  border: 2px solid rgba(239, 68, 68, 0.4); padding: 1.5rem; margin: 2rem 0; 
-  border-radius: 0.75rem; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-  animation: pulse-danger 4s infinite;
-}
-
-/* Animations */
-@keyframes pulse-warning { 0%, 100% { box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2); } 50% { box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3); } }
-@keyframes pulse-danger { 0%, 100% { box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2); } 50% { box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3); } }
-
-/* DARK MODE MEDIA QUERIES */
-@media (prefers-color-scheme: dark) {
-  .article-h2 { color: #f9fafb; text-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); }
-  .article-h3 { color: #e5e7eb; border-bottom-color: #374151; }
-  .article-p { color: #d1d5db; }
-  .article-strong { color: #f9fafb; }
-  .article-em { color: #9ca3af; }
-  .article-ul, .article-ol { background: rgba(59, 130, 246, 0.08); }
-  .article-li { color: #e5e7eb; }
-  
-  .blockquote-gradient { 
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-  }
-  .blockquote-simple { 
-    background: linear-gradient(135deg, rgba(107, 114, 128, 0.15), rgba(107, 114, 128, 0.08));
-    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-  }
-  .blockquote-quote { 
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
-  }
-  
-  .highlight-warning { 
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.1));
-    border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
-  }
-  .highlight-info { 
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.1));
-    border-color: rgba(59, 130, 246, 0.6); box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-  }
-  .highlight-success { 
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.1));
-    border-color: rgba(34, 197, 94, 0.6); box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
-  }
-  .highlight-danger { 
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
-    border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
-  }
-}
-
-/* EXPLICIT DARK MODE CLASS */
-.dark .article-h2 { color: #f9fafb; text-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); }
-.dark .article-h3 { color: #e5e7eb; border-bottom-color: #374151; }
-.dark .article-p { color: #d1d5db; }
-.dark .article-strong { color: #f9fafb; }
-.dark .article-em { color: #9ca3af; }
-.dark .article-ul, .dark .article-ol { background: rgba(59, 130, 246, 0.08); }
-.dark .article-li { color: #e5e7eb; }
-.dark .blockquote-gradient { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-}
-.dark .blockquote-simple { 
-  background: linear-gradient(135deg, rgba(107, 114, 128, 0.15), rgba(107, 114, 128, 0.08));
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-}
-.dark .blockquote-quote { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
-}
-.dark .highlight-warning { 
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25), rgba(245, 158, 11, 0.1));
-  border-color: rgba(245, 158, 11, 0.6); box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
-}
-.dark .highlight-info { 
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(59, 130, 246, 0.1));
-  border-color: rgba(59, 130, 246, 0.6); box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-}
-.dark .highlight-success { 
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.1));
-  border-color: rgba(34, 197, 94, 0.6); box-shadow: 0 4px 16px rgba(34, 197, 94, 0.3);
-}
-.dark .highlight-danger { 
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
-  border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
-}
+.article-h2 { font-size: 1.875rem; font-weight: 700; margin: 2rem 0 1rem 0; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.article-h3 { font-size: 1.5rem; font-weight: 600; margin: 1.5rem 0 0.75rem 0; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+.article-p { font-size: 1rem; line-height: 1.7; margin: 1rem 0; text-align: justify; }
+.article-ul, .article-ol { margin: 1.5rem 0; padding: 1rem 2rem; background: rgba(59, 130, 246, 0.02); border-radius: 0.5rem; }
+.article-li { margin: 0.75rem 0; line-height: 1.6; }
+.blockquote-gradient { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1)); border-left: 4px solid #3b82f6; padding: 1.5rem; margin: 2rem 0; border-radius: 0.75rem; }
+.highlight-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border: 2px solid rgba(245, 158, 11, 0.4); padding: 1.5rem; border-radius: 0.75rem; }
+.highlight-info { background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05)); border: 2px solid rgba(59, 130, 246, 0.4); padding: 1.5rem; border-radius: 0.75rem; }
+@media (prefers-color-scheme: dark) { .article-h2, .article-h3, .article-p, .article-li { color: #e5e7eb; } .article-h3 { border-bottom-color: #374151; } .article-ul, .article-ol { background: rgba(59, 130, 246, 0.08); } }
 </style>
 
-# ESSENTIAL HTML STRUCTURE EXAMPLES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# HTML STRUCTURE
+Use these tags with appropriate classes:
+- <h2 class="article-h2"> for main sections
+- <h3 class="article-h3"> for subsections  
+- <p class="article-p"> for paragraphs
+- <ul class="article-ul"> and <li class="article-li"> for lists
+- <blockquote class="blockquote-gradient"> for insights
+- <div class="highlight-info"> for important notes
 
-# ESSENTIAL HTML STRUCTURE EXAMPLES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-INTRODUCTION (150-250 words):
-<p class="article-p">Start with compelling hook addressing reader's pain point. Provide context with data/research. Promise specific value and outcomes they'll achieve.</p>
-
-SECTION STRUCTURE:
-<h2 class="article-h2">Section Title</h2>
-<p class="article-p">Opening paragraph with ${config.wordsPerParagraph} words, concrete details, examples, actionable insights.</p>
-
-<h3 class="article-h3">Subsection Title</h3>
-<p class="article-p">Detailed explanation with ${config.wordsPerParagraph} words, statistics, case studies, practical applications.</p>
-
-BLOCKQUOTE TYPES:
-<blockquote class="blockquote-gradient">
-  <strong>💡 Expert Insight:</strong> Professional advice, insider knowledge, industry secrets with specific actionable details.
-</blockquote>
-
-<blockquote class="blockquote-simple">
-  "Authoritative quote from industry leaders or research that reinforces key message and adds credibility."
-</blockquote>
-
-<blockquote class="blockquote-quote">
-  <strong>📊 Key Data:</strong> Important statistics with context about significance and application.
-</blockquote>
-
-LIST PATTERNS:
-<ul class="article-ul">
-  <li class="article-li"><strong>Point Title:</strong> ${config.wordsPerListItem} words with context, examples, implementation steps, expected outcomes.</li>
-</ul>
-
-<ol class="article-ol">
-  <li class="article-li"><strong>Step Title:</strong> Detailed instructions, tools needed, troubleshooting tips, success metrics.</li>
-</ol>
-
-HIGHLIGHT BOXES:
-<div class="highlight-warning">
-  <p><strong>⚠️ Warning:</strong> Specific risks, common errors, costly mistakes to avoid with alternatives.</p>
-</div>
-
-<div class="highlight-info">
-  <p><strong>ℹ️ Key Info:</strong> Important facts, insider knowledge, competitive advantages.</p>
-</div>
-
-<div class="highlight-success">
-  <p><strong>✅ Best Practice:</strong> Proven strategies with implementation details and success criteria.</p>
-</div>
-
-<div class="highlight-danger">
-  <p><strong>🚫 Avoid:</strong> Common pitfalls with specific consequences and better approaches.</p>
-</div>
-
-CONCLUSION:
-<h2 class="article-h2">Key Takeaways and Next Steps</h2>
-<p class="article-p">Synthesize 3-5 core principles. Provide immediate next steps for 24-48 hours. Include beginner and advanced options.</p>
-<h2 class="article-h2">Strategic Content Flow for Maximum Engagement</h2>
-# STRICT PROHIBITIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✗ NEVER mention source URLs in article content
-✗ NEVER use inline styles (style="...") - ONLY CSS classes
-✗ NEVER use markdown syntax (##, **, __, etc.)
-✗ NEVER wrap output in code fences (\`\`\`html)
-✗ NEVER include preamble text before content
-✗ NEVER write short paragraphs under ${config.wordsPerParagraph.split('-')[0]} words
-✗ NEVER use generic, fluffy content without substance
-✗ NEVER fall short of ${config.wordMin} word minimum
-
-# FINAL EXECUTION CHECKLIST
-BEGIN WRITING NOW with deep, comprehensive, valuable content.
-TARGET: ${config.wordCount} WORDS with ${config.sections} sections.
-START with article-p introduction, END with article-h2 conclusion.`;
+# REQUIREMENTS
+- TinyMCE compatible HTML only
+- CSS classes only (no inline styles)  
+- No markdown syntax
+- No code fences or preambles
+- Minimum ${config.wordMin} words`;
 
   if (sources && sources.length > 0) {
-    prompt += `\n\n# REFERENCE SOURCES (FOR FACTUAL ACCURACY ONLY)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-The following sources are provided for research and fact-checking:
+    prompt += `
 
+# SOURCES (Research Only)
 ${sources.map((url, i) => `${i + 1}. ${url}`).join('\n')}
 
-SOURCE USAGE GUIDELINES:
-✓ Extract key facts, statistics, and technical details
-✓ Verify accuracy of information you include
-✓ Synthesize insights and present in your own words
-✓ Use data points to add credibility and specificity
-✗ NEVER mention these URLs in the article content
-✗ NEVER write "according to this source" or similar phrases
-✗ NEVER include attribution or citations
-→ Treat sources as invisible background research`;
+Use for research and verification - transform into original content. Never copy-paste or mention URLs.`;
   }
-
-  prompt += `\n\n# FINAL EXECUTION CHECKLIST
-
-DO NOT include any text before <style> tag.
-DO NOT use markdown or code fences.
-BEGIN WRITING NOW with deep, comprehensive, valuable content.
-TARGET: ${config.wordCount} WORDS - GO!`;
 
   return prompt;
 }

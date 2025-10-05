@@ -1,7 +1,7 @@
 {
   "name": "enhanced-ai-content-generator",
   "version": "1.0.0",
-  "description": "Appwrite Function: Enhanced AI Content Generator using Gemini and LangSearch APIs",
+  "description": "Appwrite Function: Enhanced AI Content Generator using Gemini API",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -18,7 +18,6 @@
     "appwrite",
     "ai",
     "gemini",
-    "langsearch",
     "content-generator",
     "blog"
   ],
