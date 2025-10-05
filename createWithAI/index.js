@@ -802,7 +802,7 @@ Think step-by-step through each section:
 /* Base Typography */
 .article-h2 { 
   font-size: 1.875rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2; 
-  color: #1f2937; background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
+  color: #000000; background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
   text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -820,7 +820,7 @@ Think step-by-step through each section:
 /* Enhanced Lists */
 .article-ul, .article-ol { 
   margin: 1.5rem 0; padding-left: 2rem; 
-  background: rgba(59, 130, 246, 0.02); border-radius: 0.5rem; padding: 1rem 1rem 1rem 2rem;
+  padding: 1rem 1rem 1rem 2rem;
 }
 .article-li { 
   margin: 0.75rem 0; line-height: 1.6; color: #000000; 
@@ -954,14 +954,17 @@ Think step-by-step through each section:
 .dark .blockquote-gradient { 
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2)) !important;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25) !important;
+  color: #ffffff !important;
 }
 .dark .blockquote-simple { 
   background: linear-gradient(135deg, rgba(107, 114, 128, 0.15), rgba(107, 114, 128, 0.08)) !important;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3) !important;
+  color: #ffffff !important;
 }
 .dark .blockquote-quote { 
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1)) !important;
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25) !important;
+  color: #ffffff !important;
 }
 .dark .highlight-warning { 
   background: linear-gradient(135deg, rgba(251, 146, 60, 0.25), rgba(251, 146, 60, 0.1)) !important;
