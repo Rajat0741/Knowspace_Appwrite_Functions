@@ -773,14 +773,24 @@ Think step-by-step through each section:
 
 /* Enhanced Lists */
 .article-ul, .article-ol { 
-  margin: 1.5rem 0; padding-left: 2rem; 
+  margin: 1.5rem 0; 
   padding: 1rem 1rem 1rem 2rem;
+  background: rgba(59, 130, 246, 0.03);
+  border-radius: 0.5rem;
+  border-left: 3px solid rgba(59, 130, 246, 0.2);
 }
 .article-li { 
-  margin: 0.75rem 0; line-height: 1.6; color: #000000; 
-  position: relative; transition: all 0.2s ease;
+  margin: 0.75rem 0; 
+  line-height: 1.6; 
+  color: #1f2937; 
+  position: relative; 
+  transition: all 0.2s ease;
+  padding: 0.25rem 0;
 }
-.article-li:hover { transform: translateX(4px); }
+.article-li:hover { 
+  transform: translateX(4px); 
+  color: #1e40af;
+}
 
 /* Enhanced Tables */
 .article-table { 
@@ -853,8 +863,13 @@ Think step-by-step through each section:
   .article-p { color: #d1d5db !important; }
   .article-strong { color: #ffffff !important; }
   .article-em { color: #9ca3af !important; }
-  .article-ul, .article-ol { background: rgba(59, 130, 246, 0.08) !important; }
-  .article-li { color: #e5e7eb !important; }
+  .article-ul, .article-ol { 
+    background: rgba(59, 130, 246, 0.08) !important; 
+    border-left-color: rgba(59, 130, 246, 0.4) !important;
+  }
+  .article-li { 
+    color: #e5e7eb !important; 
+  }
   
   .article-table { background: rgba(59, 130, 246, 0.08) !important; }
   .article-table th { background: linear-gradient(135deg, #1e3a8a, #5b21b6) !important; }
@@ -898,7 +913,10 @@ Think step-by-step through each section:
 .dark .article-p { color: #d1d5db !important; }
 .dark .article-strong { color: #ffffff !important; }
 .dark .article-em { color: #9ca3af !important; }
-.dark .article-ul, .dark .article-ol { background: rgba(59, 130, 246, 0.08) !important; }
+.dark .article-ul, .dark .article-ol { 
+  background: rgba(59, 130, 246, 0.08) !important; 
+  border-left-color: rgba(59, 130, 246, 0.4) !important;
+}
 .dark .article-li { color: #e5e7eb !important; }
 .dark .article-table { background: rgba(59, 130, 246, 0.08) !important; }
 .dark .article-table th { background: linear-gradient(135deg, #1e3a8a, #5b21b6) !important; }
