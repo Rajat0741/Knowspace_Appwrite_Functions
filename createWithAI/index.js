@@ -139,7 +139,7 @@ export default async ({ req, res, log, error }) => {
     );
     if (!generatedContent.success) {
       error(`Content generation failed: ${generatedContent.error}`);
-      await updateTrackingStatus(trackingId, CONFIG.STATUS.FAILED, generatedContent.error, null, log, error);
+      await setTrackingStatusToFailed(trackingId, generatedContent.error, log, error);
       return res.json({ success: false, error: generatedContent.error }, 500, getCORSHeaders());
     }
     log(`✓ Content generated successfully, length: ${generatedContent.content.length} characters`);
@@ -150,7 +150,7 @@ export default async ({ req, res, log, error }) => {
     if (!isValidHTMLContent(generatedContent.content)) {
       const validationError = 'Content validation failed: must include <h2> or <p> tags for TinyMCE compatibility';
       error(validationError);
-      await updateTrackingStatus(trackingId, CONFIG.STATUS.FAILED, validationError, null, log, error);
+      await setTrackingStatusToFailed(trackingId, validationError, log, error);
       return res.json({ success: false, error: validationError }, 500, getCORSHeaders());
     }
     log('✓ HTML content validation passed');
@@ -165,7 +165,7 @@ export default async ({ req, res, log, error }) => {
     );
     if (!articleDoc.success) {
       error('Failed to create article document');
-      await updateTrackingStatus(trackingId, CONFIG.STATUS.FAILED, 'Failed to create article document', null, log, error);
+      await setTrackingStatusToFailed(trackingId, 'Failed to create article document', log, error);
       return res.json({ success: false, error: 'Failed to create article document' }, 500, getCORSHeaders());
     }
     log(`✓ Article document created with ID: ${articleDoc.documentId}`);
@@ -198,7 +198,7 @@ export default async ({ req, res, log, error }) => {
     
     if (trackingId) {
       log(`Updating tracking document ${trackingId} with error status`);
-      await updateTrackingStatus(trackingId, CONFIG.STATUS.FAILED, err.message, null, log, error);
+      await setTrackingStatusToFailed(trackingId, err.message, log, error);
     }
     
     return res.json({ success: false, error: err.message }, 500, getCORSHeaders());
@@ -281,6 +281,17 @@ async function checkUserPreferences(userId, requestType, log, error) {
     error(`Preference check error: ${err.message}`);
     error(`Error details: ${JSON.stringify(err)}`);
     return { success: false, error: err.message };
+  }
+}
+
+// Helper: Set tracking status to failed
+async function setTrackingStatusToFailed(trackingId, errorMessage, log, error) {
+  try {
+    log(`Setting tracking status to failed for: ${trackingId}`);
+    await updateTrackingStatus(trackingId, CONFIG.STATUS.FAILED, errorMessage, null, log, error);
+    log(`✓ Tracking status set to failed`);
+  } catch (statusError) {
+    error(`Failed to set tracking status to failed: ${statusError.message}`);
   }
 }
 
