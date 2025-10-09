@@ -81,15 +81,15 @@ export default async ({ req, res, log, error }) => {
     log(`Request timestamp: ${new Date().toISOString()}`);
     log(`Request method: ${req.method}`);
     log(`Request headers: ${JSON.stringify(req.headers)}`);
-    
+
     const requestBody = req.body || '{}';
     log(`Raw request body length: ${requestBody.length} characters`);
-    
+
     const {
       prompt, title, sources = [],
       category, requestType = 'basic', style = 'moderate', trackingId
     } = JSON.parse(requestBody);
-    
+
     // Get userId from headers (Appwrite standard)
     const userId = req.headers['x-appwrite-user-id'];
 
@@ -110,12 +110,12 @@ export default async ({ req, res, log, error }) => {
       log(`Missing fields - userId: ${!!userId}, prompt: ${!!prompt}, title: ${!!title}, category: ${!!category}, trackingId: ${!!trackingId}`);
       return res.json({ success: false, error: 'Missing required fields: userId, prompt, title, category, trackingId' }, 400, getCORSHeaders());
     }
-    
+
     if (!CONFIG.MAX_OUTPUT_TOKENS[style]) {
       error(`Invalid style validation failed: ${style}`);
       return res.json({ success: false, error: 'Invalid style. Must be concise, moderate, or extended' }, 400, getCORSHeaders());
     }
-    
+
     log('✓ All request parameters validated successfully');
 
     // 1. Check user prefs
@@ -131,7 +131,7 @@ export default async ({ req, res, log, error }) => {
     log('=== STEP 2: UPDATING TRACKING DOCUMENT STATUS TO INPROGRESS ===');
     await updateTrackingStatus(trackingId, CONFIG.STATUS.IN_PROGRESS, '', null, log, error);
     log(`✓ Tracking document ${trackingId} status updated to inprogress`);
-    
+
     // 3. Generate content (Gemini)
     log('=== STEP 3: GENERATING CONTENT WITH GEMINI ===');
     let generatedContent = await generateArticleContent(
@@ -159,7 +159,7 @@ export default async ({ req, res, log, error }) => {
     log('=== STEP 6: CREATING ARTICLE DOCUMENT ===');
     const userDetails = await getUserDetails(userId, log, error);
     log(`Author details retrieved: ${userDetails.authorName}`);
-    
+
     const articleDoc = await createArticleDocument(
       userId, title, generatedContent.content, category, sources, userDetails.authorName, log, error
     );
@@ -169,12 +169,12 @@ export default async ({ req, res, log, error }) => {
       return res.json({ success: false, error: 'Failed to create article document' }, 500, getCORSHeaders());
     }
     log(`✓ Article document created with ID: ${articleDoc.documentId}`);
-    
+
     // 7. update tracking (completed, clear error, link postId)
     log('=== STEP 7: UPDATING TRACKING STATUS TO COMPLETED ===');
     await updateTrackingStatus(trackingId, CONFIG.STATUS.COMPLETED, '', articleDoc.documentId, log, error);
     log('✓ Tracking status updated to completed');
-    
+
     // 8. decrement quota
     log('=== STEP 8: DECREMENTING USER QUOTA ===');
     await decrementUserQuota(userId, requestType, log, error);
@@ -182,7 +182,7 @@ export default async ({ req, res, log, error }) => {
 
     log('=== AI CONTENT GENERATION COMPLETED SUCCESSFULLY ===');
     log(`Total execution completed at: ${new Date().toISOString()}`);
-    
+
     return res.json({
       success: true,
       message: 'Article generated successfully',
@@ -195,12 +195,12 @@ export default async ({ req, res, log, error }) => {
     error(`Error timestamp: ${new Date().toISOString()}`);
     error(`Error message: ${err.message}`);
     error(`Error stack: ${err.stack}`);
-    
+
     if (trackingId) {
       log(`Updating tracking document ${trackingId} with error status`);
       await setTrackingStatusToFailed(trackingId, err.message, log, error);
     }
-    
+
     return res.json({ success: false, error: err.message }, 500, getCORSHeaders());
   }
 };
@@ -209,23 +209,23 @@ export default async ({ req, res, log, error }) => {
 function isValidHTMLContent(html) {
   console.log('--- HTML VALIDATION START ---');
   console.log(`Validating HTML content length: ${html ? html.length : 0} characters`);
-  
+
   const hasH2 = /<h2[^>]*>.*?<\/h2>/i.test(html);
   const hasP = /<p[^>]*>.*?<\/p>/i.test(html);
-  
+
   console.log(`Contains <h2> tags: ${hasH2}`);
   console.log(`Contains <p> tags: ${hasP}`);
-  
+
   const isValid = hasH2 || hasP;
   console.log(`HTML validation result: ${isValid ? 'PASSED' : 'FAILED'}`);
-  
+
   if (!isValid) {
     console.log('HTML validation failed - content must contain at least one <h2> or <p> tag');
     console.log(`First 500 characters of content: ${html ? html.substring(0, 500) : 'null'}...`);
   }
-  
+
   console.log('--- HTML VALIDATION END ---');
-  
+
   return isValid;
 }
 
@@ -235,15 +235,15 @@ function isValidHTMLContent(html) {
 async function checkUserPreferences(userId, requestType, log, error) {
   try {
     log(`Checking prefs for user: ${userId}`);
-    
+
     // Validate userId format
     if (!userId || typeof userId !== 'string') {
       error(`Invalid userId format: ${userId}`);
       return { success: false, error: 'Invalid user ID format.' };
     }
-    
+
     let userPrefs = {};
-    
+
     try {
       // Get user preferences using the correct Appwrite API
       log(`Fetching preferences for user: ${userId}`);
@@ -262,20 +262,20 @@ async function checkUserPreferences(userId, requestType, log, error) {
         throw prefsError; // Re-throw if it's a different error
       }
     }
-    
+
     const usageField = getUsageFieldForRequestType(requestType);
     if (!usageField) {
       error(`Invalid request type: ${requestType}`);
       return { success: false, error: 'Invalid request type.' };
     }
-    
+
     const remainingUses = userPrefs[usageField] || 0;
     log(`User has ${remainingUses} ${requestType} uses remaining`);
-    
+
     if (remainingUses <= 0) {
       return { success: false, error: `Insufficient ${requestType} uses.` };
     }
-    
+
     return { success: true };
   } catch (err) {
     error(`Preference check error: ${err.message}`);
@@ -303,25 +303,25 @@ async function updateTrackingStatus(trackingId, status, errorMessage, postId, lo
     log(`New status: ${status}`);
     log(`Error message: ${errorMessage || 'none'}`);
     log(`Post ID: ${postId || 'none'}`);
-    
+
     const updateData = { status, error: errorMessage || '' };
     if (postId) {
       updateData.postId = postId;
       log(`Adding postId to update: ${postId}`);
     }
-    
+
     log(`Update data: ${JSON.stringify(updateData)}`);
-    
+
     await databases.updateDocument(
-      CONFIG.DATABASE_ID, 
-      CONFIG.COLLECTIONS.TRACKING, 
-      trackingId, 
+      CONFIG.DATABASE_ID,
+      CONFIG.COLLECTIONS.TRACKING,
+      trackingId,
       updateData
     );
-    
+
     log(`Tracking doc updated successfully: ${trackingId}`);
     log('--- UPDATE TRACKING STATUS SUCCESS ---');
-    
+
   } catch (err) {
     error(`Tracking status update error: ${err.message}`);
     error(`Error stack: ${err.stack}`);
@@ -334,19 +334,19 @@ async function getUserDetails(userId, log, error) {
   try {
     log('--- GET USER DETAILS START ---');
     log(`Fetching user details for: ${userId}`);
-    
+
     const user = await users.get(userId);
-    
+
     log(`User retrieved successfully:`);
     log(`- User ID: ${user.$id}`);
     log(`- User name: ${user.name || 'not set'}`);
     log(`- User email: ${user.email || 'not set'}`);
     log(`- User created: ${user.$createdAt}`);
-    
+
     const authorName = user.name || 'Anonymous';
     log(`Final author name: ${authorName}`);
     log('--- GET USER DETAILS SUCCESS ---');
-    
+
     return { authorName };
   } catch (err) {
     error(`Author lookup error: ${err.message}`);
@@ -366,17 +366,17 @@ async function createArticleDocument(userId, title, content, category, sources, 
     log(`Author: ${authorName}`);
     log(`Content length: ${content.length} characters`);
     log(`Sources: ${JSON.stringify(sources)}`);
-    
+
     const articleData = {
-      userid: userId, 
-      title, 
-      content, 
+      userid: userId,
+      title,
+      content,
       category,
-      status: 'inactive', 
+      status: 'inactive',
       authorName,
       featuredimage: ''
     };
-    
+
     log(`Article data prepared (excluding content for brevity):`);
     log(`- userid: ${articleData.userid}`);
     log(`- title: ${articleData.title}`);
@@ -385,21 +385,21 @@ async function createArticleDocument(userId, title, content, category, sources, 
     log(`- authorName: ${articleData.authorName}`);
     log(`- featuredimage: ${articleData.featuredimage}`);
     log(`- content length: ${articleData.content.length} characters`);
-    
+
     log(`Database ID: ${CONFIG.DATABASE_ID}`);
     log(`Articles Collection ID: ${CONFIG.COLLECTIONS.ARTICLES}`);
-    
+
     const document = await databases.createDocument(
-      CONFIG.DATABASE_ID, 
-      CONFIG.COLLECTIONS.ARTICLES, 
-      ID.unique(), 
+      CONFIG.DATABASE_ID,
+      CONFIG.COLLECTIONS.ARTICLES,
+      ID.unique(),
       articleData
     );
-    
+
     log(`Article document created successfully with ID: ${document.$id}`);
     log(`Document created at: ${document.$createdAt}`);
     log('--- CREATE ARTICLE DOCUMENT SUCCESS ---');
-    
+
     return { success: true, documentId: document.$id };
   } catch (err) {
     error(`Article doc error: ${err.message}`);
@@ -420,28 +420,28 @@ async function generateArticleContent(prompt, title, sources, category, requestT
     log(`Style: ${style}`);
     log(`Prompt length: ${prompt.length} characters`);
     log(`Sources count: ${sources.length}`);
-    
+
     const modelName = CONFIG.MODELS[requestType] || CONFIG.MODELS.basic;
     const maxTokens = CONFIG.MAX_OUTPUT_TOKENS[style] || CONFIG.MAX_OUTPUT_TOKENS.moderate;
-    
+
     log(`Selected model: ${modelName}`);
     log(`Max output tokens: ${maxTokens}`);
-    
+
     const systemPrompt = buildSystemPrompt(title, category, sources, style);
     log(`System prompt length: ${systemPrompt.length} characters`);
-    
+
     // Configure grounding tools - Google Search for dynamic real-time information
     const tools = [
-      { 
+      {
         googleSearch: {} // Enable Google Search grounding for up-to-date information
       }
     ];
     log(`Tools configured: ${JSON.stringify(tools)}`);
-    
+
     const completePrompt = buildCompletePrompt(systemPrompt, prompt, sources);
     log(`Complete prompt parts count: ${completePrompt.length}`);
     log(`Complete prompt total length: ${JSON.stringify(completePrompt).length} characters`);
-    
+
     const requestConfig = {
       model: modelName,
       contents: completePrompt,
@@ -452,14 +452,14 @@ async function generateArticleContent(prompt, title, sources, category, requestT
         thinkingConfig: { thoughtsIncluded: true }
       }
     };
-    log(`Request configuration: ${JSON.stringify({...requestConfig, contents: '[PROMPT_DATA]'})}`);
-    
+    log(`Request configuration: ${JSON.stringify({ ...requestConfig, contents: '[PROMPT_DATA]' })}`);
+
     log('Making request to Gemini AI...');
     const response = await ai.models.generateContent(requestConfig);
-    
+
     log('Gemini AI response received');
     log(`Response object keys: ${Object.keys(response).join(', ')}`);
-    
+
     // Check for grounding metadata to see if Google Search was used
     if (response.candidates && response.candidates[0] && response.candidates[0].groundingMetadata) {
       log('✓ Response was grounded with Google Search');
@@ -467,19 +467,19 @@ async function generateArticleContent(prompt, title, sources, category, requestT
     } else {
       log('ℹ Model answered from its own knowledge (no grounding used)');
     }
-    
+
     const generatedText = response.text;
     log(`Generated text length: ${generatedText ? generatedText.length : 0} characters`);
-    
+
     if (!generatedText || generatedText.trim().length === 0) {
       error('Generated content is empty');
       log('--- GENERATE ARTICLE CONTENT FAILED (EMPTY) ---');
       return { success: false, error: 'Generated content is empty' };
     }
-    
+
     log(`First 200 characters of generated content: ${generatedText.substring(0, 200)}...`);
     log('--- GENERATE ARTICLE CONTENT SUCCESS ---');
-    
+
     return { success: true, content: generatedText };
   } catch (err) {
     error(`Gemini error: ${err.message}`);
@@ -532,9 +532,9 @@ function buildSystemPrompt(title, category, sources, style) {
       description: 'detailed and thorough'
     }
   };
-  
+
   const config = lengthConfig[style] || lengthConfig.moderate;
-  
+
   let prompt = `# 🎯 ROLE & EXPERTISE DEFINITION
 You are a **world-class ${category} content strategist** with 15+ years of experience in:
 • **Content Architecture**: Creating engaging, structured articles that drive 10x higher engagement
@@ -758,159 +758,216 @@ Think step-by-step through each section:
 **⚠️ CRITICAL: COPY THE EXACT CSS STYLES BELOW WITHOUT ANY MODIFICATION**
 
 <style>
-/* Base Typography */
-.article-h2 { 
-  font-size: 1.875rem; font-weight: 700; margin: 2rem 0 1rem 0; line-height: 1.2; 
-  color: #000000; background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-}
-.article-h3 { 
-  font-size: 1.5rem; font-weight: 700; margin: 1.5rem 0 0.75rem 0; line-height: 1.3; 
-  color: #000000; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem;
-}
-.article-p { 
-  font-size: 1rem; line-height: 1.7; margin: 1rem 0; color: #000000;
-}
-.article-strong { font-weight: 600; color: #000000; }
-.article-em { font-style: italic; color: #000000; }
-
-/* Body Background */
-body { background-color: #ffffff; }
-
-/* Enhanced Lists */
-.article-ul, .article-ol { 
-  margin: 1.5rem 0; 
-  padding: 1rem 1rem 1rem 2rem;
-  border-left: 3px solid #3b82f6;
-}
-.article-li { 
-  margin: 0.75rem 0; 
-  line-height: 1.6; 
-  color: #000000;
-  padding: 0.25rem 0;
-}
-
-/* Enhanced Tables */
-.article-table { 
-  width: 100%; border-collapse: collapse; margin: 2rem 0;
-}
-.article-table th { 
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; 
-  padding: 1rem; text-align: left; font-weight: 600; font-size: 0.95rem;
-}
-.article-table td { 
-  padding: 0.875rem 1rem; border-bottom: 1px solid #e5e7eb; 
-  color: #000000;
-}
-
-/* Advanced Blockquotes with Gradients */
-.blockquote-gradient { 
-  border-left: 4px solid #3b82f6; padding: 1.5rem; margin: 2rem 0;
-  color: #000000;
-}
-.blockquote-simple { 
-  border-left: 4px solid #6b7280; padding: 1.5rem; margin: 2rem 0; font-style: italic;
-  color: #000000;
-}
-.blockquote-quote { 
-  border-left: 4px solid #22c55e; padding: 1.5rem; margin: 2rem 0;
-  color: #000000;
-}
-
-/* Enhanced Highlight Boxes */
-.highlight-warning {
-  border: 2px solid #fb923c; padding: 1.5rem; margin: 2rem 0;
-  color: #000000;
-}
-.highlight-info {
-  border: 2px solid #0ea5e9; padding: 1.5rem; margin: 2rem 0;
-  color: #000000;
-}
-.highlight-success {
-  border: 2px solid #10b981; padding: 1.5rem; margin: 2rem 0;
-  color: #000000;
-}
-.highlight-danger {
-  border: 2px solid #ef4444; padding: 1.5rem; margin: 2rem 0;
-  color: #000000;
-}
-
-/* DARK MODE MEDIA QUERIES */
-@media (prefers-color-scheme: dark) {
-  body { background-color: #000000; }
-  .article-h2 { color: #ffffff; }
-  .article-h3 { color: #ffffff; border-bottom-color: #374151; }
-  .article-p { color: #ffffff; }
-  .article-strong { color: #ffffff; }
-  .article-em { color: #ffffff; }
-  .article-ul, .article-ol { 
-    border-left-color: #3b82f6;
+  /* Base Typography */
+  .article-h2 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin: 2rem 0 1rem 0;
+    line-height: 1.2;
+    color: #000000;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
-  .article-li { 
-    color: #ffffff; 
+
+  .article-h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.75rem 0;
+    line-height: 1.3;
+    color: #000000;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 0.5rem;
   }
-  
-  .article-table th { background: linear-gradient(135deg, #1e3a8a, #5b21b6); }
-  .article-table td { color: #ffffff; border-bottom-color: #374151; }
-  
-  .blockquote-gradient { 
+
+  .article-p {
+    font-size: 1rem;
+    line-height: 1.7;
+    margin: 1rem 0;
+    color: #000000;
+  }
+
+  .article-strong {
+    font-weight: 600;
+    color: #000000;
+  }
+
+  .article-em {
+    font-style: italic;
+    color: #000000;
+  }
+
+  /* Enhanced Lists */
+  .article-ul,
+  .article-ol {
+    margin: 1.5rem 0;
+    padding: 1rem 1rem 1rem 2rem;
+    border-left: 3px solid #3b82f6;
+  }
+
+  .article-li {
+    margin: 0.75rem 0;
+    line-height: 1.6;
+    color: #000000;
+    padding: 0.25rem 0;
+  }
+
+  /* Enhanced Tables */
+  .article-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+  }
+
+  .article-table th {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .article-table td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    color: #000000;
+  }
+
+  /* Advanced Blockquotes with Gradients */
+  .blockquote-gradient {
+    border-left: 4px solid #3b82f6;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    color: #000000;
+  }
+
+  .blockquote-simple {
+    border-left: 4px solid #6b7280;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    font-style: italic;
+    color: #000000;
+  }
+
+  .blockquote-quote {
+    border-left: 4px solid #22c55e;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    color: #000000;
+  }
+
+  /* Enhanced Highlight Boxes */
+  .highlight-warning {
+    border: 2px solid #fb923c;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    color: #000000;
+  }
+
+  .highlight-info {
+    border: 2px solid #0ea5e9;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    color: #000000;
+  }
+
+  .highlight-success {
+    border: 2px solid #10b981;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    color: #000000;
+  }
+
+  .highlight-danger {
+    border: 2px solid #ef4444;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    color: #000000;
+  }
+
+  /* DARK MODE - Applied when .dark class is present on container */
+  .dark .article-h2 {
+    color: #ffffff;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .dark .article-h3 {
+    color: #ffffff;
+    border-bottom-color: #374151;
+  }
+
+  .dark .article-p {
     color: #ffffff;
   }
-  .blockquote-simple { 
+
+  .dark .article-strong {
     color: #ffffff;
   }
-  .blockquote-quote { 
+
+  .dark .article-em {
     color: #ffffff;
   }
-  
-  .highlight-warning { 
+
+  .dark .article-ul,
+  .dark .article-ol {
+    border-left-color: #60a5fa;
+  }
+
+  .dark .article-li {
+    color: #ffffff;
+  }
+
+  .dark .article-table th {
+    background: linear-gradient(135deg, #1e3a8a, #5b21b6);
+  }
+
+  .dark .article-table td {
+    color: #ffffff;
+    border-bottom-color: #374151;
+  }
+
+  .dark .blockquote-gradient {
+    border-left-color: #60a5fa;
+    color: #ffffff;
+  }
+
+  .dark .blockquote-simple {
+    border-left-color: #9ca3af;
+    color: #ffffff;
+  }
+
+  .dark .blockquote-quote {
+    border-left-color: #4ade80;
+    color: #ffffff;
+  }
+
+  .dark .highlight-warning {
     border-color: #fb923c;
+    background-color: rgba(251, 146, 60, 0.1);
+    color: #ffffff;
   }
-  .highlight-info { 
-    border-color: #0ea5e9;
-  }
-  .highlight-success { 
-    border-color: #10b981;
-  }
-  .highlight-danger { 
-    border-color: #ef4444;
-  }
-}
 
-/* EXPLICIT DARK MODE CLASS */
-.dark body { background-color: #000000; }
-.dark .article-h2 { color: #ffffff; }
-.dark .article-h3 { color: #ffffff; border-bottom-color: #374151; }
-.dark .article-p { color: #ffffff; }
-.dark .article-strong { color: #ffffff; }
-.dark .article-em { color: #ffffff; }
-.dark .article-ul, .dark .article-ol { 
-  border-left-color: #3b82f6;
-}
-.dark .article-li { color: #ffffff; }
-.dark .article-table th { background: linear-gradient(135deg, #1e3a8a, #5b21b6); }
-.dark .article-table td { color: #ffffff; border-bottom-color: #374151; }
-.dark .blockquote-gradient { 
-  color: #ffffff;
-}
-.dark .blockquote-simple { 
-  color: #ffffff;
-}
-.dark .blockquote-quote { 
-  color: #ffffff;
-}
-.dark .highlight-warning { 
-  border-color: #fb923c;
-}
-.dark .highlight-info { 
-  border-color: #0ea5e9;
-}
-.dark .highlight-success { 
-  border-color: #10b981;
-}
-.dark .highlight-danger { 
-  border-color: #ef4444;
-}
+  .dark .highlight-info {
+    border-color: #0ea5e9;
+    background-color: rgba(14, 165, 233, 0.1);
+    color: #ffffff;
+  }
+
+  .dark .highlight-success {
+    border-color: #10b981;
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #ffffff;
+  }
+
+  .dark .highlight-danger {
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ffffff;
+  }
 </style>
 
 **⚠️ END OF CSS STYLES - COPY THE ENTIRE <style> BLOCK ABOVE EXACTLY AS-IS**
@@ -1090,7 +1147,7 @@ function buildCompletePrompt(systemPrompt, userPrompt, sources) {
   console.log(`System prompt length: ${systemPrompt.length} characters`);
   console.log(`User prompt length: ${userPrompt.length} characters`);
   console.log(`Sources count: ${sources ? sources.length : 0}`);
-  
+
   const contents = [
     {
       role: 'user',
@@ -1112,22 +1169,22 @@ function buildCompletePrompt(systemPrompt, userPrompt, sources) {
 
   console.log(`Complete prompt parts count: ${contents.length}`);
   console.log('--- BUILD COMPLETE PROMPT END ---');
-  
+
   return contents;
 }
 
 async function decrementUserQuota(userId, requestType, log, error) {
   try {
     log(`Decrementing quota for user: ${userId}, type: ${requestType}`);
-    
+
     // Validate userId is string
     if (!userId || typeof userId !== 'string') {
       error(`Invalid userId format in decrementUserQuota: ${userId}`);
       return;
     }
-    
+
     let currentPrefs = {};
-    
+
     try {
       // Get current user preferences
       currentPrefs = await users.getPrefs(userId);
@@ -1144,29 +1201,29 @@ async function decrementUserQuota(userId, requestType, log, error) {
         throw prefsError; // Re-throw if it's a different error
       }
     }
-    
+
     const usageField = getUsageFieldForRequestType(requestType);
     if (!usageField) {
       error(`Invalid request type for quota decrement: ${requestType}`);
       return;
     }
-    
+
     const currentUses = currentPrefs[usageField] || 0;
     const newUses = Math.max(0, currentUses - 1);
-    
+
     // Update user preferences with new quota
     const updatedPrefs = { ...currentPrefs, [usageField]: newUses };
-    
+
     // Validate updatedPrefs is an object
     if (!updatedPrefs || typeof updatedPrefs !== 'object') {
       error(`Invalid updatedPrefs format: ${updatedPrefs}`);
       return;
     }
-    
+
     await users.updatePrefs(userId, updatedPrefs);
-    
+
     log(`User quota updated: ${usageField} = ${newUses}`);
-  } catch (err) { 
-    error(`Quota decrement error: ${err.message}`); 
+  } catch (err) {
+    error(`Quota decrement error: ${err.message}`);
   }
 }
