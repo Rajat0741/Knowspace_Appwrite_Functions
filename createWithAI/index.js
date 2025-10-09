@@ -75,7 +75,7 @@ export default async ({ req, res, log, error }) => {
     });
   }
 
-  let trackingDocId = null;
+  let trackingId = null;
   try {
     log('=== STARTING AI CONTENT GENERATION FUNCTION ===');
     log(`Request timestamp: ${new Date().toISOString()}`);
@@ -87,7 +87,7 @@ export default async ({ req, res, log, error }) => {
     
     const {
       userId, prompt, title, sources = [],
-      category, requestType = 'basic', style = 'moderate'
+      category, requestType = 'basic', style = 'moderate', trackingId
     } = JSON.parse(requestBody);
 
     log('=== PARSED REQUEST PARAMETERS ===');
@@ -102,10 +102,10 @@ export default async ({ req, res, log, error }) => {
 
     // Validation
     log('=== VALIDATING REQUEST PARAMETERS ===');
-    if (!userId || !prompt || !title || !category) {
+    if (!userId || !prompt || !title || !category || !trackingId) {
       error('Missing required fields validation failed');
-      log(`Missing fields - userId: ${!!userId}, prompt: ${!!prompt}, title: ${!!title}, category: ${!!category}`);
-      return res.json({ success: false, error: 'Missing required fields: userId, prompt, title, category' }, 400, getCORSHeaders());
+      log(`Missing fields - userId: ${!!userId}, prompt: ${!!prompt}, title: ${!!title}, category: ${!!category}, trackingId: ${!!trackingId}`);
+      return res.json({ success: false, error: 'Missing required fields: userId, prompt, title, category, trackingId' }, 400, getCORSHeaders());
     }
     
     if (!CONFIG.MAX_OUTPUT_TOKENS[style]) {
@@ -124,17 +124,10 @@ export default async ({ req, res, log, error }) => {
     }
     log('✓ User preferences check passed');
 
-    // 2. Create tracking doc with inprogress + blank error
-    log('=== STEP 2: CREATING TRACKING DOCUMENT ===');
-    const trackingDoc = await createTrackingDocument(
-      userId, title, prompt, category, requestType, style, sources, log, error
-    );
-    if (!trackingDoc.success) {
-      error('Failed to create tracking document');
-      return res.json({ success: false, error: 'Failed to create tracking document' }, 500, getCORSHeaders());
-    }
-    trackingDocId = trackingDoc.documentId;
-    log(`✓ Tracking document created with ID: ${trackingDocId}`);
+    // 2. Update tracking document status to inprogress
+    log('=== STEP 2: UPDATING TRACKING DOCUMENT STATUS TO INPROGRESS ===');
+    await updateTrackingStatus(trackingId, CONFIG.STATUS.IN_PROGRESS, '', null, log, error);
+    log(`✓ Tracking document ${trackingId} status updated to inprogress`);
     
     // 3. Generate content (Gemini)
     log('=== STEP 3: GENERATING CONTENT WITH GEMINI ===');
@@ -143,7 +136,7 @@ export default async ({ req, res, log, error }) => {
     );
     if (!generatedContent.success) {
       error(`Content generation failed: ${generatedContent.error}`);
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, generatedContent.error, null, log, error);
+      await updateTrackingStatus(trackingId, CONFIG.STATUS.FAILED, generatedContent.error, null, log, error);
       return res.json({ success: false, error: generatedContent.error }, 500, getCORSHeaders());
     }
     log(`✓ Content generated successfully, length: ${generatedContent.content.length} characters`);
@@ -154,7 +147,7 @@ export default async ({ req, res, log, error }) => {
     if (!isValidHTMLContent(generatedContent.content)) {
       const validationError = 'Content validation failed: must include <h2> or <p> tags for TinyMCE compatibility';
       error(validationError);
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, validationError, null, log, error);
+      await updateTrackingStatus(trackingId, CONFIG.STATUS.FAILED, validationError, null, log, error);
       return res.json({ success: false, error: validationError }, 500, getCORSHeaders());
     }
     log('✓ HTML content validation passed');
@@ -169,14 +162,14 @@ export default async ({ req, res, log, error }) => {
     );
     if (!articleDoc.success) {
       error('Failed to create article document');
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, 'Failed to create article document', null, log, error);
+      await updateTrackingStatus(trackingId, CONFIG.STATUS.FAILED, 'Failed to create article document', null, log, error);
       return res.json({ success: false, error: 'Failed to create article document' }, 500, getCORSHeaders());
     }
     log(`✓ Article document created with ID: ${articleDoc.documentId}`);
     
     // 7. update tracking (completed, clear error, link postId)
     log('=== STEP 7: UPDATING TRACKING STATUS TO COMPLETED ===');
-    await updateTrackingStatus(trackingDocId, CONFIG.STATUS.COMPLETED, '', articleDoc.documentId, log, error);
+    await updateTrackingStatus(trackingId, CONFIG.STATUS.COMPLETED, '', articleDoc.documentId, log, error);
     log('✓ Tracking status updated to completed');
     
     // 8. decrement quota
@@ -190,7 +183,7 @@ export default async ({ req, res, log, error }) => {
     return res.json({
       success: true,
       message: 'Article generated successfully',
-      trackingId: trackingDocId,
+      trackingId: trackingId,
       articleId: articleDoc.documentId
     }, 200, getCORSHeaders());
 
@@ -200,9 +193,9 @@ export default async ({ req, res, log, error }) => {
     error(`Error message: ${err.message}`);
     error(`Error stack: ${err.stack}`);
     
-    if (trackingDocId) {
-      log(`Updating tracking document ${trackingDocId} with error status`);
-      await updateTrackingStatus(trackingDocId, CONFIG.STATUS.FAILED, err.message, null, log, error);
+    if (trackingId) {
+      log(`Updating tracking document ${trackingId} with error status`);
+      await updateTrackingStatus(trackingId, CONFIG.STATUS.FAILED, err.message, null, log, error);
     }
     
     return res.json({ success: false, error: err.message }, 500, getCORSHeaders());
@@ -284,59 +277,6 @@ async function checkUserPreferences(userId, requestType, log, error) {
   } catch (err) {
     error(`Preference check error: ${err.message}`);
     error(`Error details: ${JSON.stringify(err)}`);
-    return { success: false, error: err.message };
-  }
-}
-
-// Include error field on create
-async function createTrackingDocument(userId, title, prompt, category, requestType, style, sources, log, error) {
-  try {
-    log('--- CREATE TRACKING DOCUMENT START ---');
-    log(`Creating tracking doc for user: ${userId}`);
-    log(`Title: ${title}`);
-    log(`Category: ${category}`);
-    log(`Request Type: ${requestType}`);
-    log(`Style: ${style}`);
-    log(`Sources: ${JSON.stringify(sources)}`);
-    
-    const trackingData = {
-      userid: userId, 
-      title, 
-      prompt, 
-      category,
-      request_type: requestType, 
-      style, 
-      status: CONFIG.STATUS.IN_PROGRESS,
-      postId: null,
-      error: ''
-    };
-
-    // Only include sources if they exist and are not empty
-    if (sources && sources.length > 0) {
-      // Store sources as an array instead of comma-separated string
-      trackingData.sources = sources;
-    }
-    
-    log(`Tracking data prepared: ${JSON.stringify(trackingData)}`);
-    log(`Database ID: ${CONFIG.DATABASE_ID}`);
-    log(`Collection ID: ${CONFIG.COLLECTIONS.TRACKING}`);
-    
-    const document = await databases.createDocument(
-      CONFIG.DATABASE_ID, 
-      CONFIG.COLLECTIONS.TRACKING,
-      ID.unique(), 
-      trackingData
-    );
-    
-    log(`Tracking document created successfully with ID: ${document.$id}`);
-    log(`Document created at: ${document.$createdAt}`);
-    log('--- CREATE TRACKING DOCUMENT SUCCESS ---');
-    
-    return { success: true, documentId: document.$id };
-  } catch (err) {
-    error(`Tracking doc error: ${err.message}`);
-    error(`Error stack: ${err.stack}`);
-    log('--- CREATE TRACKING DOCUMENT ERROR ---');
     return { success: false, error: err.message };
   }
 }
