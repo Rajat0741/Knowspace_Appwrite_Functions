@@ -774,6 +774,9 @@ Think step-by-step through each section:
 .article-strong { font-weight: 600; color: #000000; }
 .article-em { font-style: italic; color: #000000; }
 
+/* Body Background */
+body { background-color: #ffffff; }
+
 /* Enhanced Lists */
 .article-ul, .article-ol { 
   margin: 1.5rem 0; 
@@ -834,6 +837,7 @@ Think step-by-step through each section:
 
 /* DARK MODE MEDIA QUERIES */
 @media (prefers-color-scheme: dark) {
+  body { background-color: #000000; }
   .article-h2 { color: #ffffff !important; }
   .article-h3 { color: #ffffff !important; border-bottom-color: #374151 !important; }
   .article-p { color: #ffffff !important; }
@@ -874,6 +878,7 @@ Think step-by-step through each section:
 }
 
 /* EXPLICIT DARK MODE CLASS */
+.dark body { background-color: #000000; }
 .dark .article-h2 { color: #ffffff !important; }
 .dark .article-h3 { color: #ffffff !important; border-bottom-color: #374151 !important; }
 .dark .article-p { color: #ffffff !important; }
