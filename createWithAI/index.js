@@ -86,9 +86,12 @@ export default async ({ req, res, log, error }) => {
     log(`Raw request body length: ${requestBody.length} characters`);
     
     const {
-      userId, prompt, title, sources = [],
+      prompt, title, sources = [],
       category, requestType = 'basic', style = 'moderate', trackingId
     } = JSON.parse(requestBody);
+    
+    // Get userId from headers (Appwrite standard)
+    const userId = req.headers['x-appwrite-user-id'];
 
     log('=== PARSED REQUEST PARAMETERS ===');
     log(`User ID: ${userId}`);
