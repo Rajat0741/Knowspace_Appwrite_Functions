@@ -1,6 +1,6 @@
 const sdk = require('node-appwrite');
 
-module.exports = async function (req, res) {
+module.exports = async function ({ req, res, log, error }) {
   // Initialize Appwrite client
   const client = new sdk.Client()
     .setEndpoint(process.env.APPWRITE_ENDPOINT) // Your API Endpoint
@@ -75,19 +75,19 @@ module.exports = async function (req, res) {
           // Add progress tracking
           const progressInterval = Math.max(1, Math.floor(updatedCount / 10));
           if (updatedCount % progressInterval === 0) {
-            console.log(`Progress: ${updatedCount} users processed...`);
+            log(`Progress: ${updatedCount} users processed...`);
           }
           
         } catch (userError) {
           errorCount++;
-          console.error(`✗ Failed to update user ${user.$id}:`, userError.message);
+          error(`✗ Failed to update user ${user.$id}:`, userError.message);
           // Continue with next user even if one fails
         }
       }
 
       // Check for timeout
       if (Date.now() - startTime > TIMEOUT_THRESHOLD) {
-        console.log('Function approaching timeout, stopping gracefully...');
+        log('Function approaching timeout, stopping gracefully...');
         break;
       }
 
@@ -109,11 +109,11 @@ module.exports = async function (req, res) {
       timestamp: new Date().toISOString()
     };
 
-    console.log('Update complete:', summary);
+    log('Update complete:', summary);
     return res.json(summary);
 
   } catch (error) {
-    console.error('Critical error in preferences update:', error);
+    error('Critical error in preferences update:', error);
     return res.json({
       success: false,
       error: error.message,
