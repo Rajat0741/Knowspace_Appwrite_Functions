@@ -1,0 +1,23 @@
+{
+  "name": "user-preferences-cron",
+  "version": "1.0.0",
+  "description": "Appwrite Function: Daily user preferences update with batch processing",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^19.1.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "appwrite",
+    "cron",
+    "user-preferences",
+    "batch-processing"
+  ],
+  "author": "",
+  "license": "MIT"
+}
