@@ -72,18 +72,16 @@ module.exports = async function ({ req, res, log, error }) {
 
           updatedCount++;
           
-          // Add progress tracking
-          const progressInterval = Math.max(1, Math.floor(updatedCount / 10));
-          if (updatedCount % progressInterval === 0) {
-            log(`Progress: ${updatedCount} users processed...`);
-          }
-          
         } catch (userError) {
           errorCount++;
           error(`✗ Failed to update user ${user.$id}:`, userError.message);
           // Continue with next user even if one fails
         }
       }
+
+      // Log batch progress
+      const batchNumber = Math.floor(offset / limit) + 1;
+      log(`Batch ${batchNumber} completed: ${usersList.users.length} users processed (total: ${updatedCount})`);
 
       // Check for timeout
       if (Date.now() - startTime > TIMEOUT_THRESHOLD) {
