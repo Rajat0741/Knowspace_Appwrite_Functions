@@ -84,7 +84,7 @@ export default async ({ req, res, log, error }) => {
       name: user.name || '',
       bio: user.prefs?.bio || '',
       registration: user.registration || '',
-      profilePictureId: user.prefs?.profilePictureId || '',
+      profilePictureId: user.prefs?.profilePicture || '',
     }));
 
     const totalUsers = response.total || 0;
