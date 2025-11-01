@@ -71,20 +71,19 @@ export default async ({ req, res, log, error }) => {
     queries.push(Query.limit(sanitizedLimit));
     queries.push(Query.offset(sanitizedOffset));
     
-    // Optional: Add ordering if you want consistent results
     // Note: This requires an index on 'name' attribute for sorting
     // queries.push(Query.orderAsc('name'));
 
     // Fetch users from Appwrite
     const response = await users.list(queries);
     
-    // Enhanced data sanitization with null safety
+    // Enhanced data sanitization with null safety - matching fetchUserById format
     const sanitizedUsers = response.users.map(user => ({
-      $id: user.$id || '',
-      name: user.name || '',
-      bio: user.prefs?.bio || '',
-      registration: user.registration || '',
-      profilePictureId: user.prefs?.profilePicture || '',
+      $id: user.$id,
+      name: user.name || 'Anonymous User',
+      bio: user.prefs?.bio || null,
+      profilePictureId: user.prefs?.profilePicture?.url || null,
+      registrationDate: user.$createdAt || null
     }));
 
     const totalUsers = response.total || 0;
@@ -104,7 +103,8 @@ export default async ({ req, res, log, error }) => {
         nextOffset: hasMore ? nextOffset : null,
         page: Math.floor(sanitizedOffset / sanitizedLimit) + 1,
         totalPages: Math.ceil(totalUsers / sanitizedLimit)
-      }
+      },
+      retrieved: new Date().toISOString()
     });
 
   } catch (err) {
