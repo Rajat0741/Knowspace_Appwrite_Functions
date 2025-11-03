@@ -56,6 +56,7 @@ function getUsageFieldForRequestType(requestType) {
   }
 }
 
+
 // Helper: Get CORS headers
 function getCORSHeaders() {
   return {
