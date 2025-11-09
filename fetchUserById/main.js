@@ -96,7 +96,7 @@ export default async ({ req, res, log, error }) => {
       $id: user.$id,
       name: user.name || 'Anonymous User',
       bio: user.prefs?.bio || null,
-      profilePictureId: user.prefs?.profilePicture || null,
+      profilePictureId: user.prefs?.profilePicture?.url || null,
       registrationDate: user.$createdAt || null
     };
 
