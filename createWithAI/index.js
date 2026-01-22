@@ -7,9 +7,9 @@ import { GoogleGenAI, Type } from '@google/genai';
 
 const CONFIG = {
   MODELS: {
-    basic: 'gemini-3-flash-preview',
-    pro: 'gemini-3-flash-preview',
-    ultra: 'gemini-3-pro-preview'
+    basic: 'gemini-2.5-flash-lite',
+    pro: 'gemini-2.5-flash',
+    ultra: 'gemini-3-flash'
   },
   MAX_OUTPUT_TOKENS: {
     concise: 4000,
@@ -305,7 +305,22 @@ async function updateTrackingStatus(trackingId, status, errorMessage, postId, lo
     log(`Error message: ${errorMessage || 'none'}`);
     log(`Post ID: ${postId || 'none'}`);
 
-    const updateData = { status, error: errorMessage || '' };
+    // Ensure errorMessage is a string and truncate it to 500 chars (Appwrite limit)
+    let safeErrorMessage = errorMessage || '';
+    if (typeof safeErrorMessage !== 'string') {
+        try {
+            safeErrorMessage = JSON.stringify(safeErrorMessage);
+        } catch (e) {
+            safeErrorMessage = String(safeErrorMessage);
+        }
+    }
+    
+    if (safeErrorMessage.length > 500) {
+        log(`Truncating error message from ${safeErrorMessage.length} to 500 chars`);
+        safeErrorMessage = safeErrorMessage.substring(0, 500);
+    }
+
+    const updateData = { status, error: safeErrorMessage };
     if (postId) {
       updateData.postId = postId;
       log(`Adding postId to update: ${postId}`);
