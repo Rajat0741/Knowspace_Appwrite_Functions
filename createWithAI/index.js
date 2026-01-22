@@ -7,14 +7,14 @@ import { GoogleGenAI, Type } from '@google/genai';
 
 const CONFIG = {
   MODELS: {
-    basic: 'gemini-2.5-flash-lite',
-    pro: 'gemini-2.5-flash',
-    ultra: 'gemini-2.5-pro'
+    basic: 'gemini-3-flash-preview',
+    pro: 'gemini-3-flash-preview',
+    ultra: 'gemini-3-pro-preview'
   },
   MAX_OUTPUT_TOKENS: {
-    concise: 30000,
-    moderate: 45000,
-    extended: 60000
+    concise: 4000,
+    moderate: 6000,
+    extended: 8000
   },
   STATUS: {
     IN_PROGRESS: 'inprogress',
@@ -450,7 +450,9 @@ async function generateArticleContent(prompt, title, sources, category, requestT
         tools,
         temperature: 0.7,
         maxOutputTokens: maxTokens,
-        thinkingConfig: { thoughtsIncluded: true }
+        thinkingConfig: {
+          thinkingLevel: 'medium'
+        }
       }
     };
     log(`Request configuration: ${JSON.stringify({ ...requestConfig, contents: '[PROMPT_DATA]' })}`);
@@ -493,652 +495,119 @@ async function generateArticleContent(prompt, title, sources, category, requestT
 // Build prompts
 function buildSystemPrompt(title, category, sources, style) {
   const lengthConfig = {
-    short: {
-      wordCount: '1200-1600',
-      wordMin: 1200,
-      wordMax: 1600,
+    concise: {
+      wordCount: '250-350',
       sections: 4,
-      subsectionsPerSection: 3,
-      paragraphsPerSection: 3,
-      wordsPerParagraph: '60-90',
-      listItems: 6,
-      wordsPerListItem: '25-40',
-      blockquotes: 2,
-      description: 'concise and focused'
+      description: 'brief'
     },
     moderate: {
-      wordCount: '1800-2400',
-      wordMin: 1800,
-      wordMax: 2400,
-      sections: 5,
-      subsectionsPerSection: 3,
-      paragraphsPerSection: 4,
-      wordsPerParagraph: '70-100',
-      listItems: 8,
-      wordsPerListItem: '30-45',
-      blockquotes: 3,
-      description: 'balanced and comprehensive'
+      wordCount: '350-450',
+      sections: 4,
+      description: 'balanced'
     },
-    long: {
-      wordCount: '2600-3200',
-      wordMin: 2600,
-      wordMax: 3200,
-      sections: 6,
-      subsectionsPerSection: 4,
-      paragraphsPerSection: 5,
-      wordsPerParagraph: '80-110',
-      listItems: 10,
-      wordsPerListItem: '35-50',
-      blockquotes: 4,
-      description: 'detailed and thorough'
+    extended: {
+      wordCount: '400-500',
+      sections: 5,
+      description: 'comprehensive'
     }
   };
 
   const config = lengthConfig[style] || lengthConfig.moderate;
 
-  let prompt = `# 🎯 ROLE & EXPERTISE DEFINITION
-You are a **world-class ${category} content strategist** with 15+ years of experience in:
-• **Content Architecture**: Creating engaging, structured articles that drive 10x higher engagement
-• **Visual Design**: Mastering TinyMCE integration with advanced CSS styling and dark mode optimization  
-• **SEO & UX**: Building content that ranks #1 and converts readers into loyal followers
-• **${category} Specialization**: Deep domain expertise with latest trends, tools, and methodologies
+  let prompt = `You are a ${category} expert. Write a ${config.description} blog article in HTML for TinyMCE.
 
-# ⚠️ CRITICAL FORMATTING REQUIREMENT
-**DO NOT USE MARKDOWN FORMAT** - Output must be pure HTML with CSS classes only. No markdown syntax (##, **, *, etc.) allowed.
+**Requirements:**
+- Title: "${title}"  
+- Length: ${config.wordCount} words
+- Sections: ${config.sections} main sections with <h2 class="article-h2">
+- Format: HTML only - NO markdown
 
-# 🎨 VISUAL CONTENT CREATION PHILOSOPHY
-
-## 🌈 **Core Design Principles**:
-| **Element** | **Purpose** | **Implementation** |
-|------------|-------------|-------------------|
-| 🎭 **Color Psychology** | Guide attention & emotion | <span style="color: #E74C3C;">Red for urgency</span>, <span style="color: #3498DB;">Blue for trust</span>, <span style="color: #2ECC71;">Green for success</span> |
-| 📊 **Visual Hierarchy** | Easy scanning & comprehension | Tables, lists, emojis, highlighting |
-| 🎪 **Interactive Elements** | Maximum engagement | Hover effects, animations, gradients |
-| 🌓 **Accessibility** | Universal usability | Perfect light/dark mode compatibility |
-
-## 🚀 **Content Enhancement Strategy**:
-• **Replace paragraphs** → Dynamic bullet points with substance  
-• **Add visual anchors** → Tables, charts, emoji markers
-• **Create emphasis** → Color coding, highlighting, stylized boxes
-• **Ensure scannability** → Headers, subheaders, visual breaks
-• **Maximize impact** → Every line delivers value, zero fluff
-
-# 🎪 PRIMARY MISSION
-Create an **exceptional, comprehensive ${category} article** that is:
-✅ **Visually stunning** - Rich colors, perfect typography, engaging layout
-✅ **Deeply informative** - ${config.description} content with actionable insights  
-✅ **TinyMCE optimized** - Flawless rendering with CSS classes only
-✅ **Dark mode perfect** - Beautiful in both light and dark themes
-
-# 🔥 ADVANCED PROMPTING TECHNIQUES INTEGRATION
-
-## 🧠 **Chain-of-Thought Reasoning**:
-Think step-by-step through each section:
-1. **Research** → Use Google Search grounding for latest data
-2. **Analyze** → Break down complex concepts into digestible parts  
-3. **Synthesize** → Combine insights from multiple angles
-4. **Apply** → Show practical implementation steps
-5. **Visualize** → Present through tables, lists, highlights
-6. **Validate** → Ensure every point adds substantial value
-
-## 🎭 **Few-Shot Learning Examples**:
-
-**❌ Generic Approach:**
-"AI is important for businesses."
-
-**✅ Optimized ${category} Approach:**
-"<div class='highlight-info'><p><strong>💡 Key Insight:</strong> ${category} professionals leveraging AI tools see 40% productivity gains within 90 days, with specific implementation strategies including [detailed examples with metrics].</p></div>"
-
-**❌ Basic List:**
-• Point 1
-• Point 2  
-• Point 3
-
-**✅ Enhanced Visual List:**
-<ul class="article-ul">
-  <li class="article-li"><strong>🎯 Strategic Point:</strong> Detailed 35-55 word explanation with context, examples, and actionable next steps</li>
-  <li class="article-li"><strong>⚡ Implementation:</strong> Specific tools, timelines, and success metrics with troubleshooting tips</li>
-  <li class="article-li"><strong>📊 Results:</strong> Expected outcomes with measurement strategies and optimization approaches</li>
-</ul>
-
-# 🚫 CRITICAL CONTENT CREATION RULES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚫 **NEVER COPY-PASTE CONTENT**: You must SYNTHESIZE, ANALYZE, and CREATE ORIGINAL content
-🚫 **NEVER REPRODUCE EXACT TEXT**: Transform information into your own unique explanations
-🚫 **NEVER USE GENERIC TEMPLATES**: Create specific, tailored content for this exact topic
-🚫 **NEVER WRITE PARAGRAPHS**: Use bullet points, lists, tables, and visual elements EXCLUSIVELY
-🚫 **NEVER USE BLAND LANGUAGE**: Every sentence must have substance and visual appeal
-🚫 **NEVER SKIP VISUAL ELEMENTS**: Include emojis, colors, highlights, and styling throughout
-🚫 **NEVER START WITH MARKDOWN**: No title headers, no "Sources:" sections, no markdown syntax
-🚫 **NEVER USE PLAIN TEXT TABLES**: Always use proper HTML <table> tags with CSS classes
-
-✅ **ALWAYS APPLY INFORMATION**: Don't just list facts - explain HOW and WHY they matter
-✅ **ALWAYS ADD PERSONAL INSIGHTS**: Provide analysis, interpretation, and practical implications  
-✅ **ALWAYS CREATE UNIQUE PERSPECTIVES**: Approach the topic from fresh, valuable angles
-✅ **ALWAYS SYNTHESIZE MULTIPLE SOURCES**: Combine information into cohesive, original insights
-✅ **ALWAYS USE VISUAL FORMATTING**: Tables, lists, highlights, colors, emojis in every section
-✅ **ALWAYS PRIORITIZE SUBSTANCE**: Less words, more meaning - every line must deliver value
-✅ **ALWAYS AVOID PARAGRAPHS**: Use lists, tables, highlights, and visual elements instead
-
-# 🔄 ITERATIVE CONTENT TRANSFORMATION STRATEGY
-
-## 🔍 **Step-by-Step Content Creation Process**:
-
-### **PHASE 1: RESEARCH & ANALYSIS**
-• 🌐 **Google Search Grounding**: Gather latest, accurate information from authoritative sources
-• 📊 **Data Validation**: Cross-reference statistics and facts across multiple sources
-• 🎯 **Gap Analysis**: Identify what's missing in current ${category} conversations
-• 🔬 **Trend Identification**: Spot emerging patterns and future implications
-
-### **PHASE 2: SYNTHESIS & ORIGINALITY**  
-• 🧠 **Information Fusion**: Combine insights from multiple perspectives into unique angles
-• 💡 **Value Addition**: Transform raw data into actionable insights and strategies
-• 🎨 **Creative Presentation**: Package information through visual elements and engaging formats
-• 🔗 **Connection Building**: Link concepts that sources might treat separately
-
-### **PHASE 3: VISUAL OPTIMIZATION**
-• 🎭 **Color Psychology**: Apply strategic color coding for maximum impact
-• 📱 **Scan-friendly Design**: Structure for easy mobile and desktop reading
-• 🎪 **Interactive Elements**: Include hover effects, animations, and dynamic highlights
-• 🌓 **Universal Accessibility**: Ensure perfect rendering in light and dark modes
-
-### **PHASE 4: QUALITY VALIDATION**
-• ✅ **Content Depth**: Verify each section delivers substantial value
-• 🎯 **Visual Appeal**: Confirm rich use of tables, lists, highlights, and emojis
-• 📏 **Length Compliance**: Ensure ${config.wordCount} word target achievement
-• 🔧 **Technical Accuracy**: Validate TinyMCE compatibility and CSS class usage
-
-# 📐 ARTICLE PARAMETERS & CONSTRAINTS
-
-## 📋 **Core Requirements**:
-| **Parameter** | **Value** | **Critical Notes** |
-|---------------|-----------|-------------------|
-| 📝 **Title** | "${title}" | Primary focus and SEO anchor |
-| 🏷️ **Category** | ${category} | Domain expertise lens |
-| 🎨 **Style** | ${style.toUpperCase()} | Content depth and complexity |
-| 📊 **Target Words** | ${config.wordCount} words | **MINIMUM ${config.wordMin}, MAXIMUM ${config.wordMax}** |
-
-## 🏗️ **STRUCTURAL ARCHITECTURE**:
-
-**INTRODUCTION (120-180 words)**
-• 🎯 Hook: Use bullet points or lists - NO paragraph blocks
-• 📊 Context: Present data through visual elements only
-• 🎁 Promise: Structure as highlights or numbered points
-
-**MAIN SECTIONS (${config.sections} major sections)**
-• 🎪 Each Section: <h2 class="article-h2">Visual Title</h2>
-• 📝 Content: NO paragraphs - use lists, tables, highlights ONLY
-• 🔧 Subsection A: <h3 class="article-h3">Actionable Insight</h3>
-• 💡 Subsection B: <h3 class="article-h3">Practical Application</h3>
-• 🎯 Visual Elements: Tables with HTML tags, lists, highlights, blockquotes
-• 📊 Structure: AVOID paragraph blocks at all costs
-
-**CONCLUSION (150-200 words)**
-• 🔑 Key Takeaways: Use numbered or bulleted lists only
-• ⚡ Next Steps: Present as action items with visual formatting
-• 🚀 Advanced Options: Table format or highlighted boxes preferred
-
-## ⚡ **ENHANCED CONTENT REQUIREMENTS**:
-
-### 🎨 **Visual Element Distribution** (MANDATORY):
-• **${config.blockquotes} Blockquotes**: Mix of gradient, simple, and quote styles
-• **${config.listItems}+ List Items**: Each with ${config.wordsPerListItem} words  
-• **4+ Highlight Boxes**: Warning, info, success, danger variations
-• **3+ Tables**: Comparison, data, or strategy matrices
-• **Emojis Throughout**: Visual anchors and attention directors
-• **Color Highlights**: Key terms and phrases emphasized
-
-### 📊 **Content Density Formula**:
-- **Total Sections**: ${config.sections} major sections (each with <h2 class="article-h2">)
-- **Subsections**: ${config.subsectionsPerSection} per section (each with <h3 class="article-h3">)  
-- **Paragraphs**: ${config.paragraphsPerSection} per section (${config.wordsPerParagraph} words each)
-- **Lists**: Multiple per section with detailed explanations
-- **Visual Elements**: Minimum 2 per section (tables, highlights, blockquotes)
-
-**🎯 THIS IS A ${style.toUpperCase()} ARTICLE - YOU MUST WRITE ${config.wordCount} WORDS WITH MAXIMUM VISUAL APPEAL**
-
-# ORIGINAL CONTENT CREATION GUIDELINES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. START WITH RESEARCH: Use Google Search grounding to get latest, accurate information
-2. SYNTHESIZE INSIGHTS: Don't repeat - combine multiple perspectives into original analysis
-3. ADD VALUE: Explain the "so what?" - why does this information matter to readers?
-4. PROVIDE CONTEXT: Connect new information to broader trends and implications
-5. CREATE EXAMPLES: Develop original, relevant examples that illustrate key points
-6. OFFER SOLUTIONS: Transform information into actionable advice and strategies
-7. ANTICIPATE QUESTIONS: Address what readers will want to know next
-8. BRIDGE GAPS: Connect concepts that sources might treat separately
-
-# 🚀 OUTPUT FORMAT & EXECUTION REQUIREMENTS
-
-## 📋 **MANDATORY FORMAT SPECIFICATIONS**:
-
-| **Requirement** | **Implementation** | **Critical Notes** |
-|----------------|-------------------|-------------------|
-| 🎯 **Content Type** | TinyMCE compatible HTML only | No markdown, no code fences |
-| 🎨 **Styling Method** | CSS classes exclusively | Zero inline styles (breaks dark mode) |
-| 📱 **Responsive Design** | Perfect light/dark mode rendering | Test both themes thoroughly |
-| 🔗 **Semantic HTML** | Proper heading hierarchy (h2→h3) | SEO and accessibility optimized |
-
-## 🎪 **ENHANCED VISUAL ELEMENT EXAMPLES**:
-
-### **🔥 Optimized Section Header**:
-• Use: <h2 class="article-h2">🚀 Game-Changing ${category} Strategies</h2>
-• Follow with: <p class="article-p">Transform your approach with cutting-edge techniques...</p>
-
-### **💡 Enhanced Information Blocks**:
-• Use highlight boxes: <div class="highlight-info">
-• Include data: 73% of ${category} professionals see improvements
-• Add specific timeframes: within 30 days, based on 2024 research
-
-### **📊 Strategic Comparison Tables** (MANDATORY HTML FORMAT):
-• ALWAYS use proper HTML table structure: <table class="article-table">
-• Include table headers: <th><strong>🔧 Method</strong></th>
-• Use table rows: <tr> and <td> tags for all data
-• Add visual elements: ⭐⭐⭐⭐⭐ ratings, 📈📈📈 indicators
-• NEVER write tables as plain text - use HTML tags only
-
-### **🎯 Action-Oriented Lists**:
-• Structure phases: 🚀 Phase 1 (Week 1-2), ⚡ Phase 2 (Week 3-4)
-• Include specific tools and methodologies
-• Provide measurable KPIs and performance indicators
-
-## 🚫 **ABSOLUTE FORMATTING PROHIBITIONS**:
-❌ **NO** inline styles - BREAKS DARK MODE  
-❌ **NO** markdown syntax - NOT COMPATIBLE
-❌ **NO** code fences - UNNECESSARY WRAPPER
-❌ **NO** preamble text - START DIRECTLY  
-❌ **NO** generic content - Every line adds value
-❌ **NO** paragraphs anywhere - Use lists, tables, highlights instead
-❌ **NO** markdown titles - Never start with "**Title**" or "Sources:"
-❌ **NO** plain text tables - Always use HTML <table> tags
-❌ **NO** source lists - Integrate information seamlessly without attribution
-
-# COMPREHENSIVE CSS STYLING WITH DARK MODE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-**⚠️ CRITICAL: COPY THE EXACT CSS STYLES BELOW WITHOUT ANY MODIFICATION**
-
+**HTML Classes:**
 <style>
-  /* Base Typography */
   .article-h2 {
     font-size: 1.875rem;
     font-weight: 700;
     margin: 2rem 0 1rem 0;
-    line-height: 1.2;
     color: #000000;
     background: linear-gradient(135deg, #3b82f6, #8b5cf6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-
   .article-h3 {
     font-size: 1.5rem;
     font-weight: 700;
     margin: 1.5rem 0 0.75rem 0;
-    line-height: 1.3;
     color: #000000;
     border-bottom: 2px solid #e5e7eb;
     padding-bottom: 0.5rem;
   }
-
   .article-p {
     font-size: 1rem;
     line-height: 1.7;
     margin: 1rem 0;
     color: #000000;
   }
-
-  .article-strong {
-    font-weight: 600;
-    color: #000000;
-  }
-
-  .article-em {
-    font-style: italic;
-    color: #000000;
-  }
-
-  /* Enhanced Lists */
-  .article-ul,
-  .article-ol {
+  .article-ul, .article-ol {
     margin: 1.5rem 0;
     padding: 1rem 1rem 1rem 2rem;
     border-left: 3px solid #3b82f6;
   }
-
   .article-li {
     margin: 0.75rem 0;
-    line-height: 1.6;
     color: #000000;
-    padding: 0.25rem 0;
   }
-
-  /* Enhanced Tables */
   .article-table {
     width: 100%;
     border-collapse: collapse;
     margin: 2rem 0;
   }
-
   .article-table th {
     background: linear-gradient(135deg, #3b82f6, #8b5cf6);
     color: white;
     padding: 1rem;
-    text-align: left;
     font-weight: 600;
-    font-size: 0.95rem;
   }
-
   .article-table td {
     padding: 0.875rem 1rem;
     border-bottom: 1px solid #e5e7eb;
     color: #000000;
   }
-
-  /* Advanced Blockquotes with Gradients */
-  .blockquote-gradient {
-    border-left: 4px solid #3b82f6;
-    padding: 1.5rem;
-    margin: 2rem 0;
-    color: #000000;
-  }
-
-  .blockquote-simple {
-    border-left: 4px solid #6b7280;
-    padding: 1.5rem;
-    margin: 2rem 0;
-    font-style: italic;
-    color: #000000;
-  }
-
-  .blockquote-quote {
-    border-left: 4px solid #22c55e;
-    padding: 1.5rem;
-    margin: 2rem 0;
-    color: #000000;
-  }
-
-  /* Enhanced Highlight Boxes */
-  .highlight-warning {
-    border: 2px solid #fb923c;
-    padding: 1.5rem;
-    margin: 2rem 0;
-    color: #000000;
-  }
-
   .highlight-info {
     border: 2px solid #0ea5e9;
     padding: 1.5rem;
     margin: 2rem 0;
     color: #000000;
   }
-
-  .highlight-success {
-    border: 2px solid #10b981;
-    padding: 1.5rem;
-    margin: 2rem 0;
-    color: #000000;
-  }
-
-  .highlight-danger {
-    border: 2px solid #ef4444;
-    padding: 1.5rem;
-    margin: 2rem 0;
-    color: #000000;
-  }
-
-  /* DARK MODE - Applied when .dark class is present on container */
   .dark .article-h2 {
     color: #ffffff;
     background: linear-gradient(135deg, #60a5fa, #a78bfa);
-    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
-
-  .dark .article-h3 {
-    color: #ffffff;
-    border-bottom-color: #374151;
-  }
-
-  .dark .article-p {
+  .dark .article-h3, .dark .article-p, .dark .article-li {
     color: #ffffff;
   }
-
-  .dark .article-strong {
-    color: #ffffff;
-  }
-
-  .dark .article-em {
-    color: #ffffff;
-  }
-
-  .dark .article-ul,
-  .dark .article-ol {
+  .dark .article-ul, .dark .article-ol {
     border-left-color: #60a5fa;
   }
-
-  .dark .article-li {
-    color: #ffffff;
-  }
-
   .dark .article-table th {
     background: linear-gradient(135deg, #1e3a8a, #5b21b6);
   }
-
   .dark .article-table td {
     color: #ffffff;
     border-bottom-color: #374151;
   }
-
-  .dark .blockquote-gradient {
-    border-left-color: #60a5fa;
-    color: #ffffff;
-  }
-
-  .dark .blockquote-simple {
-    border-left-color: #9ca3af;
-    color: #ffffff;
-  }
-
-  .dark .blockquote-quote {
-    border-left-color: #4ade80;
-    color: #ffffff;
-  }
-
-  .dark .highlight-warning {
-    border-color: #fb923c;
-    background-color: rgba(251, 146, 60, 0.1);
-    color: #ffffff;
-  }
-
   .dark .highlight-info {
-    border-color: #0ea5e9;
+    color: #ffffff;
     background-color: rgba(14, 165, 233, 0.1);
-    color: #ffffff;
-  }
-
-  .dark .highlight-success {
-    border-color: #10b981;
-    background-color: rgba(16, 185, 129, 0.1);
-    color: #ffffff;
-  }
-
-  .dark .highlight-danger {
-    border-color: #ef4444;
-    background-color: rgba(239, 68, 68, 0.1);
-    color: #ffffff;
   }
 </style>
 
-**⚠️ END OF CSS STYLES - COPY THE ENTIRE <style> BLOCK ABOVE EXACTLY AS-IS**
-
-# 🏗️ META-PROMPTING & SELF-OPTIMIZATION
-
-## 🧠 **Think Step-by-Step Approach**:
-Before writing each section, consider:
-• **Purpose**: What specific value does this section provide?
-• **Audience**: How does this serve ${category} professionals specifically?  
-• **Visual Appeal**: What elements make this section visually engaging?
-• **Actionability**: What can readers immediately implement?
-• **Uniqueness**: How is this different from generic ${category} content?
-
-## 🔄 **Continuous Quality Enhancement**:
-As you write, constantly ask yourself:
-• Is this the most visually appealing way to present this information?
-• Have I included enough tables, lists, and highlight boxes?
-• Does every paragraph deliver substantial value in ${config.wordsPerParagraph} words?
-• Am I using color psychology and emojis effectively?
-• Would this make readers want to bookmark and share?
-
-# 🎯 ESSENTIAL HTML STRUCTURE TEMPLATES
-
-INTRODUCTION (120-180 words) - NO PARAGRAPHS:
-• Use bullet points: <ul class="article-ul"><li class="article-li">Hook point</li></ul>
-• Use highlights: <div class="highlight-info">Key context</div>
-• Use lists: <ol class="article-ol"><li class="article-li">Promise value</li></ol>
-
-SECTION STRUCTURE - AVOID PARAGRAPHS:
-<h2 class="article-h2">Section Title</h2>
-• Use lists: <ul class="article-ul"><li class="article-li">Key points with details</li></ul>
-• Use tables: <table class="article-table"><tr><th>Header</th></tr><tr><td>Data</td></tr></table>
-• Use highlights: <div class="highlight-success">Important information</div>
-
-<h3 class="article-h3">Subsection Title</h3>
-• Use numbered lists: <ol class="article-ol"><li class="article-li">Step-by-step details</li></ol>
-• Use comparison tables: <table class="article-table"> with proper HTML structure
-• Use blockquotes: <blockquote class="blockquote-gradient">Expert insights</blockquote>
-
-BLOCKQUOTE TYPES:
-<blockquote class="blockquote-gradient">
-  <strong>💡 Expert Insight:</strong> Professional advice, insider knowledge, industry secrets with specific actionable details.
-</blockquote>
-
-<blockquote class="blockquote-simple">
-  "Authoritative quote from industry leaders or research that reinforces key message and adds credibility."
-</blockquote>
-
-<blockquote class="blockquote-quote">
-  <strong>📊 Key Data:</strong> Important statistics with context about significance and application.
-</blockquote>
-
-LIST PATTERNS:
-<ul class="article-ul">
-  <li class="article-li"><strong>Point Title:</strong> ${config.wordsPerListItem} words with context, examples, implementation steps, expected outcomes.</li>
-</ul>
-
-<ol class="article-ol">
-  <li class="article-li"><strong>Step Title:</strong> Detailed instructions, tools needed, troubleshooting tips, success metrics.</li>
-</ol>
-
-HIGHLIGHT BOXES:
-<div class="highlight-warning">
-  <p><strong>⚠️ Warning:</strong> Specific risks, common errors, costly mistakes to avoid with alternatives.</p>
-</div>
-
-<div class="highlight-info">
-  <p><strong>ℹ️ Key Info:</strong> Important facts, insider knowledge, competitive advantages.</p>
-</div>
-
-<div class="highlight-success">
-  <p><strong>✅ Best Practice:</strong> Proven strategies with implementation details and success criteria.</p>
-</div>
-
-<div class="highlight-danger">
-  <p><strong>🚫 Avoid:</strong> Common pitfalls with specific consequences and better approaches.</p>
-</div>
-
-CONCLUSION - NO PARAGRAPHS ALLOWED:
-<h2 class="article-h2">Key Takeaways and Next Steps</h2>
-• Use lists: <ul class="article-ul"><li class="article-li">3-5 core principles in detailed points</li></ul>
-• Use action tables: <table class="article-table"> for immediate next steps (24-48 hours)
-• Use highlights: <div class="highlight-success">Beginner and advanced options</div>
-# STRICT PROHIBITIONS - ABSOLUTELY FORBIDDEN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚫 NEVER copy-paste any content from sources - transform everything into original insights
-🚫 NEVER reproduce exact phrases, sentences, or paragraphs from any source
-🚫 NEVER use generic, templated language - create specific, targeted content
-🚫 NEVER mention source URLs in article content
-🚫 NEVER use inline styles (style="...") - ONLY CSS classes
-🚫 NEVER use markdown syntax (##, **, __, etc.)
-🚫 NEVER wrap output in code fences (\`\`\`html)
-🚫 NEVER include preamble text before content
-🚫 NEVER write paragraphs anywhere - use lists, tables, highlights exclusively
-🚫 NEVER use generic, fluffy content without substance
-🚫 NEVER fall short of ${config.wordMin} word minimum
-🚫 NEVER simply list information - always explain implications and applications
-🚫 NEVER start with markdown headers like "**Title**" or "Sources:" sections
-🚫 NEVER create plain text tables - always use HTML <table> tags
-🚫 NEVER write paragraph blocks - use bullet points, lists, tables, highlights only
-
-# CONTENT ORIGINALITY REQUIREMENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ TRANSFORM: Convert research into your own explanations and insights
-✅ SYNTHESIZE: Combine multiple perspectives into unique, cohesive content
-✅ ANALYZE: Explain why information matters and how it applies practically
-✅ CONTEXTUALIZE: Connect facts to broader trends, implications, and outcomes
-✅ INNOVATE: Present information through fresh examples and unique angles
-✅ PERSONALIZE: Tailor every section to the specific user prompt and requirements
-
-# FINAL EXECUTION CHECKLIST
-BEGIN WRITING NOW with deep, comprehensive, valuable content.
-TARGET: ${config.wordCount} WORDS with ${config.sections} sections.
-START with article-p introduction, END with article-h2 conclusion.`;
-
-  if (sources && sources.length > 0) {
-    prompt += `\n\n# REFERENCE SOURCES (FOR RESEARCH AND SYNTHESIS ONLY)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-The following sources are provided for research and synthesis:
-
-${sources.map((url, i) => `${i + 1}. ${url}`).join('\n')}
-
-CRITICAL SOURCE USAGE GUIDELINES:
-✅ RESEARCH: Extract key facts, statistics, and technical details for understanding
-✅ VERIFY: Use multiple sources to confirm accuracy of information
-✅ SYNTHESIZE: Combine insights from different sources into original analysis
-✅ TRANSFORM: Convert source information into your own explanations and insights
-✅ CONTEXTUALIZE: Explain the significance and practical implications of data
-✅ EXPAND: Use source information as starting points for deeper exploration
-
-🚫 ABSOLUTELY FORBIDDEN:
-✗ NEVER copy-paste any text, phrases, or sentences from these sources
-✗ NEVER reproduce exact wording or structure from sources
-✗ NEVER mention these URLs in the article content
-✗ NEVER write "according to this source" or similar attribution phrases
-✗ NEVER include citations, references, or direct quotes
-✗ NEVER simply rephrase - create entirely original explanations
-
-→ THINK OF SOURCES AS INVISIBLE RESEARCH MATERIAL - use them to understand the topic deeply, then write completely original content that reflects your understanding`;
-  }
-
-  prompt += `\n\n# 🚀 FINAL EXECUTION PROTOCOL
-
-## ✅ **PRE-WRITING CHECKLIST**:
-• 🎯 **Role Clarity**: I am a ${category} expert creating visually stunning content
-• 📊 **Target Metrics**: ${config.wordCount} words, ${config.sections} sections, maximum visual appeal
-• 🎨 **Visual Requirements**: Tables, lists, highlights, emojis throughout every section
-• 🌓 **Technical Standards**: CSS classes only, perfect light/dark mode compatibility
-• 🚫 **NO PARAGRAPHS**: Use lists, tables, highlights, blockquotes exclusively
-
-## 🎪 **EXECUTION STANDARDS**:
-• **START IMMEDIATELY**: No preamble - begin with <style> tag followed by content
-• **NO MARKDOWN HEADERS**: Never start with "**Title**" or markdown formatting
-• **NO SOURCE LISTS**: Never include "Sources:" sections or URL references
-• **VISUAL FIRST**: Every section must include multiple visual elements
-• **NO PARAGRAPH BLOCKS**: Use bullet points, lists, tables, highlights only
-• **SUBSTANCE OVER FILLER**: Every line delivers specific, actionable value
-• **${category.toUpperCase()} EXPERTISE**: Demonstrate deep domain knowledge throughout
-• **ENGAGEMENT FOCUS**: Write content that readers bookmark and share
-
-## 🎯 **SUCCESS CRITERIA**:
-✅ **Length**: Exactly ${config.wordCount} words achieved
-✅ **Visuals**: Rich use of emojis, colors, tables, lists, highlights
-✅ **Structure**: ${config.sections} major sections with perfect HTML hierarchy  
-✅ **Format**: Zero paragraphs - only lists, tables, and visual elements
-✅ **Tables**: Proper HTML <table> tags with CSS classes, never plain text
-✅ **Technical**: Flawless TinyMCE compatibility with CSS classes only
-
-**🚀 BEGIN CREATING EXCEPTIONAL ${category.toUpperCase()} CONTENT NOW!**`;
+**Rules:**
+- Start with <style> tag, then content
+- Use CSS classes only - NO inline styles
+- Write original content - don't copy sources
+- Keep it concise`;
 
   return prompt;
 }

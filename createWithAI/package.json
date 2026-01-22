@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "node-appwrite": "^19.1.0",
-    "@google/genai": "^0.4.0"
+    "@google/genai": "^1.0.0"
   },
   "engines": {
     "node": ">=18"
