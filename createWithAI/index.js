@@ -458,17 +458,24 @@ async function generateArticleContent(prompt, title, sources, category, requestT
     log(`Complete prompt parts count: ${completePrompt.length}`);
     log(`Complete prompt total length: ${JSON.stringify(completePrompt).length} characters`);
 
+    const config = {
+      tools,
+      temperature: 0.7,
+      maxOutputTokens: maxTokens
+    };
+
+    // Add thinkingConfig only for Gemini 3 models
+    if (modelName.includes('gemini-3')) {
+      config.thinkingConfig = {
+        thinkingLevel: 'medium'
+      };
+      log('✓ ThinkingConfig enabled for Gemini 3 model');
+    }
+
     const requestConfig = {
       model: modelName,
       contents: completePrompt,
-      config: {
-        tools,
-        temperature: 0.7,
-        maxOutputTokens: maxTokens,
-        thinkingConfig: {
-          thinkingLevel: 'medium'
-        }
-      }
+      config
     };
     log(`Request configuration: ${JSON.stringify({ ...requestConfig, contents: '[PROMPT_DATA]' })}`);
 
